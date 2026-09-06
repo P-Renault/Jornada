@@ -1,8 +1,11 @@
-CONTROL DE TRABAJO V9
+# Control de Trabajo V10.0
 
-Flujo de dos etapas:
-1) Iniciar jornada: fecha actual, meta, horas planificadas, hora de inicio y km inicial. Guarda inmediatamente en Supabase y congela el plan proyectado.
-2) Terminar jornada: despliega el formulario de cierre con hora fin, km final, viajes, ganancia bruta, combustible real opcional, comisión real opcional y notas. El botón Cerrar día calcula, guarda y cierra la jornada.
-3) Al cerrar: muestra análisis Meta vs Plan vs Real y actualiza Resumen, Historial y Calendario.
+Flujo de jornada en dos etapas:
+1. Iniciar jornada: fecha actual, meta, horas planificadas, hora de inicio y km inicial. Se guarda inmediatamente en Supabase como `en_curso` y congela el plan proyectado.
+2. Terminar jornada: abre el formulario de cierre sin guardar todavía. Se completan hora fin, km final, viajes, ganancia bruta y opcionalmente combustible/comisión/nota.
+3. Cerrar día: guarda el cierre, cambia el estado a `cerrada`, conserva el plan original y muestra Meta vs Plan vs Real.
+4. Historial: cada jornada cerrada queda acumulada por fecha; una jornada en curso se puede abrir para completar el cierre.
+5. Resumen: muestra la jornada actual, comparación gráfica, costos y resumen mensual.
+6. Versión visible: V10.0 en la cabecera y pie.
 
-Supabase: ejecutar supabase_jornadas.sql antes de usar la V9.
+Ejecuta `supabase_jornadas.sql` en el SQL Editor de Supabase.
