@@ -21,9 +21,9 @@ function historicalRates(){const done=cache.filter(completed);if(done.length<3)r
 function projection(){const s=settings(),rates=historicalRates(),goal=n('metaDia'),planned=n('horasPlan');const needHours=rates.netHora>0?goal/rates.netHora:0;const km=planned*rates.kmHora,trips=Math.round(planned*rates.viajesHora),fuel=rates.kmHora>0?(km/s.rendimiento)*s.precioLitro:0,maint=km*s.mantKm;const grossNeeded=s.comisionPct<100?(goal+fuel+maint)/(1-s.comisionPct/100):0;const net=planned*rates.netHora;const grossProjected=s.comisionPct<100?(net+fuel+maint)/(1-s.comisionPct/100):0;return{rates,needHours,km,trips,fuel,maint,grossNeeded,net,grossProjected,goal,planned}}
 function renderProjection(){const p=projection();$('planHours').textContent=p.needHours.toFixed(2)+' h';$('planKm').textContent=p.km.toFixed(1)+' km';$('planTrips').textContent=p.trips+' viajes';$('planFuel').textContent=CLP(p.fuel);$('planMaintenance').textContent=CLP(p.maint);$('planGross').textContent=CLP(p.grossProjected);$('planNet').textContent=CLP(p.net);$('planGrossGoal').textContent=CLP(p.grossNeeded);$('planRate').textContent=CLP(p.rates.netHora)+'/h';$('planSource').textContent='Proyección basada en '+p.rates.source+'. Meta: '+CLP(p.goal)+'. Jornada planificada: '+n('horasPlan').toFixed(2)+' h.';const delta=p.net-p.goal;$('planStatus').textContent=delta>=0?'Con esta jornada proyectada, la meta es alcanzable.':'Con esta jornada proyectada, faltarían '+CLP(Math.abs(delta))+' para alcanzar la meta.'}
 function actualCalc(){const s=settings(),km=$('kmFinal').value.trim()===''?0:Math.max(0,n('kmFinal')-n('kmInicio')),h=hoursBetween($('horaInicio').value,$('horaFin').value);const estFuel=s.rendimiento>0?(km/s.rendimiento)*s.precioLitro:0;const fuel=$('combustible').value.trim()===''?estFuel:n('combustible');const maint=km*s.mantKm;const autoComm=n('bruta')*s.comisionPct/100;const comm=$('comision').value.trim()===''?autoComm:n('comision');const net=n('bruta')-fuel-maint-comm;const goal=n('metaDia');$('actualHours').textContent=h.toFixed(2)+' h';$('actualKm').textContent=km.toFixed(1)+' km';$('actualFuel').textContent=CLP(fuel)+(fuel===estFuel?' · estimado':' · real');$('actualMaint').textContent=CLP(maint);$('actualComm').textContent=CLP(comm);$('actualGross').textContent=CLP(n('bruta'));$('actualNet').textContent=CLP(net);$('actualDiff').textContent=CLP(net-goal);$('actualGoalStatus').textContent=goal>0?(net>=goal?'META CUMPLIDA':'FALTAN '+CLP(goal-net)):'Sin meta';return{km,h,fuel,maint,comm,net}}
-function setStartMode(){ $('closingPanel').classList.add('hidden');$('workSubmit').textContent='Iniciar jornada';$('workSubmit').classList.remove('secondary','hidden');$('workFinish').classList.add('hidden');$('workCancel').classList.add('hidden');$('workFormTitle').textContent='Iniciar jornada de hoy';$('closingNote').textContent='Completa los datos reales al terminar la jornada y pulsa “Terminar jornada”.'}
-function setActiveMode(r){$('workId').value=r.id;$('fecha').value=r.fecha;$('fecha').disabled=true;$('closingPanel').classList.remove('hidden');$('workFormTitle').textContent='Jornada en curso';$('workSubmit').classList.add('hidden');$('workFinish').classList.remove('hidden');$('workCancel').classList.remove('hidden');$('closingNote').textContent='La jornada ya fue guardada. Completa los datos reales de cierre y pulsa “Terminar jornada”.'}
-function setClosedEditMode(r){$('workId').value=r.id;$('fecha').disabled=false;$('closingPanel').classList.remove('hidden');$('workFormTitle').textContent='Editar jornada cerrada';$('workSubmit').classList.add('hidden');$('workFinish').classList.remove('hidden');$('workFinish').textContent='Guardar cambios';$('workCancel').classList.remove('hidden');$('closingNote').textContent='Estás editando una jornada ya cerrada. Los datos reales se volverán a calcular y guardar.'}
+function setStartMode(){ $('closingPanel').classList.add('hidden');$('workSubmit').textContent='Iniciar jornada';$('workSubmit').classList.remove('secondary','hidden');$('workFinish').classList.add('hidden');$('closeDay').classList.add('hidden');$('workCancel').classList.add('hidden');$('workFormTitle').textContent='Iniciar jornada de hoy';$('closingNote').textContent='La jornada aún no está iniciada.';}
+function setActiveMode(r){$('workId').value=r.id;$('fecha').value=r.fecha;$('fecha').disabled=true;$('closingPanel').classList.add('hidden');$('workFormTitle').textContent='Jornada en curso';$('workSubmit').classList.add('hidden');$('workFinish').classList.remove('hidden');$('workFinish').textContent='Terminar jornada';$('closeDay').classList.add('hidden');$('workCancel').classList.remove('hidden');$('closingNote').textContent='La jornada está guardada. Pulsa “Terminar jornada” para ingresar los datos de cierre.';}
+function setClosedEditMode(r){$('workId').value=r.id;$('fecha').disabled=false;$('closingPanel').classList.remove('hidden');$('workFormTitle').textContent='Editar jornada cerrada';$('workSubmit').classList.add('hidden');$('workFinish').classList.add('hidden');$('closeDay').classList.remove('hidden');$('closeDay').textContent='Guardar cambios';$('workCancel').classList.remove('hidden');$('closingNote').textContent='Estás editando una jornada ya cerrada. Los datos reales se volverán a calcular y guardar.'}
 function clearForm(){ $('workForm').reset();$('workId').value='';$('fecha').value=today();$('fecha').disabled=true;$('metaDia').value=localStorage.getItem('last_goal')||'';$('horaInicio').value='';$('kmInicio').value='';setStartMode();renderProjection();actualCalc() }
 function loadTodayActive(){const active=cache.find(r=>r.fecha===today()&&r.estado==='en_curso');if(active){fillRecord(active);setActiveMode(active)}else{clearForm()}}
 function fillRecord(r){$('workId').value=r.id;$('fecha').value=r.fecha;$('metaDia').value=r.meta_dia??'';$('horasPlan').value=r.horas_planificadas??'';$('horaInicio').value=r.hora_inicio?.slice(0,5)||'';$('horaFin').value=r.hora_fin?.slice(0,5)||'';$('kmInicio').value=r.km_inicio??'';$('kmFinal').value=r.km_final??'';$('viajes').value=r.viajes??'';$('bruta').value=r.ganancia_bruta??'';$('combustible').value=r.combustible??'';$('comision').value=r.comision_app??'';$('notas').value=r.notas||'';renderProjection();actualCalc()}
@@ -37,7 +37,7 @@ $('workForm').onsubmit=async e=>{
  if(id)return msg('workMsg','La jornada ya está iniciada. Usa “Terminar jornada” para guardar el cierre.');
  if(err)return msg('workMsg',err);
  if(cache.some(r=>r.fecha===today()&&r.estado==='en_curso'))return msg('workMsg','Ya existe una jornada en curso para hoy.');
- const payload={fecha:today(),meta_dia:n('metaDia'),horas_planificadas:n('horasPlan'),hora_inicio:$('horaInicio').value,km_inicio:n('kmInicio'),viajes:0,notas:$('notas').value.trim(),estado:'en_curso'};
+ const p=projection(); const payload={fecha:today(),meta_dia:n('metaDia'),horas_planificadas:n('horasPlan'),hora_inicio:$('horaInicio').value,km_inicio:n('kmInicio'),viajes:0,notas:$('notas').value.trim(),estado:'en_curso',plan_horas_meta:p.needHours,plan_viajes:p.trips,plan_km:p.km,plan_combustible:p.fuel,plan_mantenimiento:p.maint,plan_ganancia_bruta:p.grossProjected,plan_ganancia_neta:p.net};
  const {data,error}=await db.from('jornadas_trabajo').insert(payload).select().single();
  if(error)return msg('workMsg',error.message);
  localStorage.setItem('last_goal',String(payload.meta_dia));
@@ -60,16 +60,20 @@ async function finishCurrent(){
  if(error)return msg('workMsg',error.message);
  await refresh();
  const closed=cache.find(r=>String(r.id)===String(id));
- if(closed){fillRecord(closed);setClosedEditMode(closed);renderDashboard();} 
- msg('workMsg','Jornada terminada y guardada. El análisis Meta vs. Plan vs. Real ya está disponible en esta pantalla y en Resumen.');
+ if(closed){fillRecord(closed);setClosedEditMode(closed);renderDashboard();}
+ msg('workMsg','Día cerrado y jornada guardada. Revisa el análisis Meta vs. Plan vs. Real en esta pantalla y en Resumen.');
 }
 
+$('workFinish').onclick=()=>{ $('closingPanel').classList.remove('hidden'); $('workFinish').classList.add('hidden'); $('closeDay').classList.remove('hidden'); $('closeDay').textContent='Cerrar día'; $('closingNote').textContent='Completa ahora los datos reales de cierre y pulsa “Cerrar día”.'; window.scrollTo({top:document.getElementById('closingPanel').getBoundingClientRect().top+window.scrollY-20,behavior:'smooth'}); };
+$('closeDay').onclick=finishCurrent;
 $('workCancel').onclick=()=>{loadTodayActive();msg('workMsg','Operación cancelada.')};
 $('workFinish').onclick=finishCurrent;
 window.editWork=id=>{const r=cache.find(x=>String(x.id)===String(id));if(!r)return;fillRecord(r);document.querySelector('[data-tab="jornadas"]').click();if(r.estado==='en_curso')setActiveMode(r);else setClosedEditMode(r)};
 window.deleteWork=async id=>{if(!confirm('¿Borrar esta jornada?'))return;const{error}=await db.from('jornadas_trabajo').delete().eq('id',id);if(error)return alert(error.message);await refresh();loadTodayActive()};
 function monthRows(){const m=$('historyMonth').value;return cache.filter(r=>r.fecha.startsWith(m)).sort((a,b)=>b.fecha.localeCompare(a.fecha))}
-function renderHistory(){const rows=monthRows();$('historialLista').innerHTML=rows.length?rows.map(r=>{const st=r.estado==='cerrada'?'Cerrada':'En curso';return `<div class="row"><div class="row-main"><b>${r.fecha} · ${esc(r.hora_inicio?.slice(0,5))}${r.hora_fin?'–'+esc(r.hora_fin.slice(0,5)):''}</b><div>${st} · Meta ${CLP(r.meta_dia)} · Plan ${Number(r.horas_planificadas||0).toFixed(2)} h</div>${r.estado==='cerrada'?`<small>${Number(r.horas_trabajadas||0).toFixed(2)} h · ${Number(r.km_recorridos||0).toFixed(1)} km · ${r.viajes||0} viajes · Neto ${CLP(r.ganancia_neta)}</small>`:'<small>Jornada pendiente de cierre</small>'}</div><div class="row-right"><strong class="${r.estado==='cerrada'?(Number(r.ganancia_neta)>=Number(r.meta_dia)?'positive':'negative'):''}">${r.estado==='cerrada'?CLP(r.ganancia_neta):'EN CURSO'}</strong><div class="actions"><button class="small" onclick="editWork(${r.id})">${r.estado==='en_curso'?'Terminar':'Editar'}</button><button class="small danger" onclick="deleteWork(${r.id})">Borrar</button></div></div></div>`}).join(''):'<p class="muted">Sin jornadas para este mes.</p>'}
+function renderHistory(){const rows=monthRows();$('historialLista').innerHTML=rows.length?rows.map(r=>{const st=r.estado==='cerrada'?'Cerrada':'En curso';return `<div class="row"><div class="row-main"><b>${r.fecha} · ${esc(r.hora_inicio?.slice(0,5))}${r.hora_fin?'–'+esc(r.hora_fin.slice(0,5)):''}</b><div>${st} · Meta ${CLP(r.meta_dia)} · Plan ${Number(r.horas_planificadas||0).toFixed(2)} h</div>${r.estado==='cerrada'?`<small>${Number(r.horas_trabajadas||0).toFixed(2)} h · ${Number(r.km_recorridos||0).toFixed(1)} km · ${r.viajes||0} viajes · Neto ${CLP(r.ganancia_neta)}</small>`:'<small>Jornada pendiente de cierre</small>'}</div><div class="row-right"><strong class="${r.estado==='cerrada'?(Number(r.ganancia_neta)>=Number(r.meta_dia)?'positive':'negative'):''}">${r.estado==='cerrada'?CLP(r.ganancia_neta):'EN CURSO'}</strong><div class="actions"><button type="button" class="small history-edit" data-id="${r.id}">${r.estado==='en_curso'?'Terminar':'Editar'}</button><button type="button" class="small danger history-delete" data-id="${r.id}">Borrar</button></div></div></div>`}).join(''):'<p class="muted">Sin jornadas para este mes.</p>'}
+
+$('historialLista').addEventListener('click',e=>{const edit=e.target.closest('.history-edit');const del=e.target.closest('.history-delete');if(edit){window.editWork(edit.dataset.id)}else if(del){window.deleteWork(del.dataset.id)}});
 function summary(m){const rs=cache.filter(r=>r.fecha.startsWith(m)&&r.estado==='cerrada'),sum=k=>rs.reduce((a,r)=>a+Number(r[k]||0),0);return{rs,h:sum('horas_trabajadas'),km:sum('km_recorridos'),trips:sum('viajes'),gross:sum('ganancia_bruta'),net:sum('ganancia_neta'),fuel:sum('combustible'),maint:sum('mantenimiento'),comm:sum('comision_app'),goals:sum('meta_dia')}}
 function todayRecord(){return cache.find(r=>r.fecha===today())||null}
 function renderTodayDashboard(){
@@ -83,12 +87,12 @@ function renderTodayDashboard(){
  }
  const s=settings(),rates=historicalRates();
  const planHours=Number(r.horas_planificadas||0),goal=Number(r.meta_dia||0);
- const planNet=planHours*rates.netHora;
- const planTrips=Math.round(planHours*rates.viajesHora);
- const planKm=planHours*rates.kmHora;
- const planFuel=rates.kmHora>0?(planKm/s.rendimiento)*s.precioLitro:0;
- const planMaint=planKm*s.mantKm;
- const planGross=s.comisionPct<100?(planNet+planFuel+planMaint)/(1-s.comisionPct/100):0;
+ const planNet=Number(r.plan_ganancia_neta||0) || planHours*rates.netHora;
+ const planTrips=Number(r.plan_viajes||0) || Math.round(planHours*rates.viajesHora);
+ const planKm=Number(r.plan_km||0) || planHours*rates.kmHora;
+ const planFuel=Number(r.plan_combustible||0) || (rates.kmHora>0?(planKm/s.rendimiento)*s.precioLitro:0);
+ const planMaint=Number(r.plan_mantenimiento||0) || planKm*s.mantKm;
+ const planGross=Number(r.plan_ganancia_bruta||0) || (s.comisionPct<100?(planNet+planFuel+planMaint)/(1-s.comisionPct/100):0);
  const realHours=Number(r.horas_trabajadas||0),realTrips=Number(r.viajes||0),realKm=Number(r.km_recorridos||0),realGross=Number(r.ganancia_bruta||0),realNet=Number(r.ganancia_neta||0);
  const closed=r.estado==='cerrada';
  $('dashboardTurnStatus').textContent=closed?(realNet>=goal?'Meta cumplida':'Meta no alcanzada'):'EN CURSO';
@@ -108,6 +112,12 @@ function renderTodayDashboard(){
   return '<tr><td>'+label+'</td><td>'+(unit==='$'?CLP(plan):plan.toFixed(1)+' '+unit)+'</td><td>'+(real===null?'—':unit==='$'?CLP(real):real.toFixed(1)+' '+unit)+'</td><td class="'+(diff===null?'':diff>=0?'positive':'negative')+'">'+diffText+'</td></tr>';
  }).join('');
  const max=Math.max(goal,planNet,realNet,1);
+ const costRows=[
+  ['Combustible',planFuel,closed?Number(r.combustible||0):null,'$'],
+  ['Mantenimiento',planMaint,closed?Number(r.mantenimiento||0):null,'$'],
+  ['Comisión',planGross*s.comisionPct/100,closed?Number(r.comision_app||0):null,'$']
+ ];
+ $('todayCostTable').innerHTML=costRows.map(function(row){const label=row[0],plan=row[1],real=row[2],unit=row[3];const diff=real===null?null:real-plan;return '<tr><td>'+label+'</td><td>'+CLP(plan)+'</td><td>'+(real===null?'—':CLP(real))+'</td><td class="'+(diff===null?'':diff>=0?'negative':'positive')+'">'+(diff===null?'Pendiente':(diff>=0?'+':'')+CLP(diff))+'</td></tr>';}).join('');
  $('todayCompareBars').innerHTML=
   '<div class="bar-row"><span>Meta neta</span><div class="bar-track"><div class="bar goal" style="width:'+Math.min(100,goal/max*100)+'%"></div></div><b>'+CLP(goal)+'</b></div>'+ 
   '<div class="bar-row"><span>Plan neto</span><div class="bar-track"><div class="bar plan" style="width:'+Math.min(100,planNet/max*100)+'%"></div></div><b>'+CLP(planNet)+'</b></div>'+ 
