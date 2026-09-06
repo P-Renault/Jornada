@@ -1,4 +1,4 @@
-const VERSION = 'V10.0';
+const VERSION = 'V11.1';
 let db = null;
 let cache = [];
 let calendarMonth = new Date();
@@ -298,7 +298,8 @@ $('workForm').addEventListener('submit', async (e) => {
     plan_combustible: p.fuel,
     plan_mantenimiento: p.maint,
     plan_ganancia_bruta: p.grossProjected,
-    plan_ganancia_neta: p.net
+    plan_ganancia_neta: p.net,
+    plan_comision: p.grossProjected * settings().comisionPct / 100
   };
 
   const { data, error } = await db.from('jornadas_trabajo').insert(payload).select().single();
@@ -367,7 +368,7 @@ function renderClosingAnalysis(r) {
   const plan = {
     net:Number(r.plan_ganancia_neta ?? 0), gross:Number(r.plan_ganancia_bruta ?? 0), hours:Number(r.horas_planificadas || 0),
     trips:Number(r.plan_viajes ?? 0), km:Number(r.plan_km ?? 0), fuel:Number(r.plan_combustible ?? 0), maint:Number(r.plan_mantenimiento ?? 0),
-    comm:Number(r.plan_ganancia_bruta ?? 0) * s.comisionPct / 100
+    comm:Number(r.plan_comision ?? (Number(r.plan_ganancia_bruta ?? 0) * s.comisionPct / 100))
   };
   const real = { net:Number(r.ganancia_neta || 0), gross:Number(r.ganancia_bruta || 0), hours:Number(r.horas_trabajadas || 0), trips:Number(r.viajes || 0), km:Number(r.km_recorridos || 0), fuel:Number(r.combustible || 0), maint:Number(r.mantenimiento || 0), comm:Number(r.comision_app || 0) };
   const rows = [
@@ -442,7 +443,7 @@ function renderTodayDashboard() {
   $('todayComparisonTable').innerHTML = rows.map(([label,p,rr,u]) => { const d=rr===null?null:rr-p; const pct=d!==null&&p?d/p*100:0; const f=v=>u==='$'?CLP(v):Number(v).toFixed(1)+' '+u; return '<tr><td>'+label+'</td><td>'+f(p)+'</td><td>'+(rr===null?'—':f(rr))+'</td><td class="'+(d===null?'':d>=0?'positive':'negative')+'">'+(d===null?'Pendiente':(d>=0?'+':'')+f(d)+' ('+pct.toFixed(0)+'%)')+'</td></tr>'; }).join('');
   const max = Math.max(Number(r.meta_dia||0), plan.net, real.net, 1);
   $('todayCompareBars').innerHTML = '<div class="bar-row"><span>Meta</span><div class="bar-track"><div class="bar goal" style="width:'+Math.min(100,Number(r.meta_dia||0)/max*100)+'%"></div></div><b>'+CLP(r.meta_dia)+'</b></div><div class="bar-row"><span>Plan</span><div class="bar-track"><div class="bar plan" style="width:'+Math.min(100,plan.net/max*100)+'%"></div></div><b>'+CLP(plan.net)+'</b></div><div class="bar-row"><span>Real</span><div class="bar-track"><div class="bar actual" style="width:'+(closed?Math.min(100,real.net/max*100):0)+'%"></div></div><b>'+(closed?CLP(real.net):'Pendiente')+'</b></div>';
-  const planComm = plan.grossProjected * s.comisionPct / 100;
+  const planComm = Number(r.plan_comision ?? (plan.grossProjected * s.comisionPct / 100));
   const costs = [['Combustible',plan.fuel,closed?real.fuel:null],['Mantenimiento',plan.maint,closed?real.maint:null],['Comisión',planComm,closed?real.comm:null]];
   $('todayCostTable').innerHTML = costs.map(([label,p,rr]) => { const d=rr===null?null:rr-p; return '<tr><td>'+label+'</td><td>'+CLP(p)+'</td><td>'+(rr===null?'—':CLP(rr))+'</td><td class="'+(d===null?'':d>=0?'negative':'positive')+'">'+(d===null?'Pendiente':(d>=0?'+':'')+CLP(d))+'</td></tr>'; }).join('');
 }
