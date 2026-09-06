@@ -37,7 +37,7 @@ $('workForm').onsubmit=async e=>{
  if(id)return msg('workMsg','La jornada ya está iniciada. Usa “Terminar jornada” para guardar el cierre.');
  if(err)return msg('workMsg',err);
  if(cache.some(r=>r.fecha===today()&&r.estado==='en_curso'))return msg('workMsg','Ya existe una jornada en curso para hoy.');
- const payload={fecha:today(),meta_dia:n('metaDia'),horas_planificadas:n('horasPlan'),hora_inicio:$('horaInicio').value,km_inicio:n('kmInicio'),viajes:0,hora_fin:null,km_final:null,horas_trabajadas:null,km_recorridos:null,combustible:null,mantenimiento:null,ganancia_bruta:null,comision_app:null,ganancia_neta:null,notas:$('notas').value.trim(),estado:'en_curso'};
+ const payload={fecha:today(),meta_dia:n('metaDia'),horas_planificadas:n('horasPlan'),hora_inicio:$('horaInicio').value,km_inicio:n('kmInicio'),viajes:0,notas:$('notas').value.trim(),estado:'en_curso'};
  const {data,error}=await db.from('jornadas_trabajo').insert(payload).select().single();
  if(error)return msg('workMsg',error.message);
  localStorage.setItem('last_goal',String(payload.meta_dia));
