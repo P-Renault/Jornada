@@ -1,4 +1,4 @@
-const VERSION = 'V17.0';
+const VERSION = 'V18.0';
 let db = null;
 let cache = [];
 let calendarMonth = new Date();
@@ -356,20 +356,48 @@ async function startJourney() {
   };
   $('workSubmit').disabled = true;
   setMsg('workMsg', 'Guardando jornada en Supabase…');
-  const { data, error } = await db.from('jornadas_trabajo').insert(payload).select().single();
+  // IMPORTANTE V18: no usamos INSERT(...).select().single().
+  // Algunas configuraciones de PostgREST/RLS pueden dejar esa petición esperando
+  // aunque el INSERT sea válido. Primero escribimos y después recargamos la fila.
+  const insertPromise = db.from('jornadas_trabajo').insert(payload);
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('La respuesta de Supabase tardó demasiado. Revisa la conexión y las políticas RLS.')), 12000));
+  let result;
+  try {
+    result = await Promise.race([insertPromise, timeout]);
+  } catch (e) {
+    $('workSubmit').disabled = false;
+    return setMsg('workMsg', 'No se pudo confirmar el inicio: ' + (e.message || 'error de conexión'));
+  }
+  const { error } = result || {};
   if (error) {
     $('workSubmit').disabled = false;
     return setMsg('workMsg', 'No se pudo iniciar la jornada: ' + error.message);
   }
+
   localStorage.setItem('last_goal', String(payload.meta_dia));
-  cache = [data, ...cache.filter(x => String(x.id) !== String(data.id))];
-  fillRecord(data);
-  setActiveMode(data, true);
-  renderProjection(projectionFromRecord(data));
+
+  // Recuperamos la jornada recién insertada desde la base de datos.
+  const { data: fresh, error: readError } = await db.from('jornadas_trabajo')
+    .select('*').eq('fecha', payload.fecha).eq('estado', 'en_curso')
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (readError || !fresh) {
+    // El INSERT ya fue confirmado. No dejamos el botón en "Iniciar".
+    const localRecord = { ...payload, id: 'pending-' + Date.now() };
+    cache = [localRecord, ...cache.filter(x => !isTodayRecord(x) || !isActive(x))];
+    fillRecord(localRecord);
+    setActiveMode(localRecord, true);
+    $('workSubmit').disabled = false;
+    setMsg('workMsg', 'Jornada guardada en Supabase. No se pudo recargar el registro todavía; pulsa “Terminar jornada” para continuar y vuelve a sincronizar cuando haya conexión.');
+    return;
+  }
+  cache = [fresh, ...cache.filter(x => String(x.id) !== String(fresh.id))];
+  fillRecord(fresh);
+  setActiveMode(fresh, true);
+  renderProjection(projectionFromRecord(fresh));
   actualCalc();
   renderDashboard();
   renderHistory();
-  setMsg('workMsg', 'Jornada iniciada y guardada. El botón cambió a “Terminar jornada” y el formulario de cierre está disponible.');
+  setMsg('workMsg', 'Jornada iniciada y guardada en Supabase. Ahora puedes pulsar “Terminar jornada” y completar el cierre.');
 }
 
 $('workSubmit').addEventListener('click', async (e) => {
@@ -418,6 +446,7 @@ async function finishCurrent() {
     estado: 'cerrada',
     updated_at: new Date().toISOString()
   };
+  if (String(id).startsWith('pending-')) return setMsg('workMsg', 'La jornada fue iniciada pero aún no se pudo recuperar su ID de Supabase. Recarga la aplicación para sincronizarla antes de cerrar.');
   const { error } = await db.from('jornadas_trabajo').update(payload).eq('id', id);
   if (error) return setMsg('workMsg', error.message);
   await refresh();
