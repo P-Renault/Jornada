@@ -1,5 +1,9 @@
-Control de Trabajo V11.1
+# Control de Trabajo V12.0
 
-Flujo: Iniciar jornada -> guardar datos iniciales y plan proyectado -> Terminar jornada -> abrir formulario de cierre -> Cerrar día -> guardar resultado real -> comparar Meta/Plan/Real.
+Versión definitiva del flujo en dos etapas:
+1. Iniciar jornada guarda inmediatamente los datos iniciales y el plan proyectado en Supabase.
+2. Terminar jornada abre el formulario de cierre sin cerrar la jornada.
+3. Cerrar día guarda los datos reales, cierra la jornada y muestra META vs PLAN vs REAL.
+4. Cada jornada cerrada permanece en Historial, Calendario y Resumen mensual.
 
-La versión visible es V11.1. Los recursos usan cache-busting ?v=11.1 para evitar que GitHub Pages/Chrome mantenga la V10.
+Sube todos los archivos de esta carpeta a GitHub Pages y ejecuta `supabase_jornadas.sql` en Supabase.

@@ -1,4 +1,4 @@
-const VERSION = 'V11.1';
+const VERSION = 'V12.0';
 let db = null;
 let cache = [];
 let calendarMonth = new Date();
@@ -155,8 +155,16 @@ function actualCalc() {
   return { km, h, fuel, maint, comm, net };
 }
 
+function setInitialFieldsLocked(locked) {
+  ['metaDia','horasPlan','horaInicio','kmInicio'].forEach(id => {
+    const el = $(id);
+    if (el) el.disabled = locked;
+  });
+}
+
 function setStartMode() {
   closeFormOpen = false;
+  $('workId').value = '';
   $('closingPanel').classList.add('hidden');
   $('workSubmit').classList.remove('hidden');
   $('workSubmit').textContent = 'Iniciar jornada';
@@ -166,6 +174,7 @@ function setStartMode() {
   $('workFormTitle').textContent = 'Iniciar jornada de hoy';
   $('closingNote').textContent = 'La jornada aún no está iniciada.';
   $('fecha').disabled = true;
+  setInitialFieldsLocked(false);
 }
 
 function setActiveMode(r, openClose = false) {
@@ -173,15 +182,17 @@ function setActiveMode(r, openClose = false) {
   $('workId').value = r.id;
   $('fecha').value = r.fecha;
   $('fecha').disabled = true;
+  setInitialFieldsLocked(true);
   $('workSubmit').classList.add('hidden');
-  $('workFinish').classList.remove('hidden');
+  $('workFinish').classList.toggle('hidden', openClose);
   $('workFinish').textContent = 'Terminar jornada';
   $('workCancel').classList.remove('hidden');
   $('workFormTitle').textContent = 'Jornada en curso';
-  $('closingNote').textContent = openClose ? 'Completa los datos reales y pulsa “Cerrar día”.' : 'Jornada guardada. Cuando termines de trabajar, pulsa “Terminar jornada” para abrir el cierre.';
+  $('closingNote').textContent = openClose
+    ? 'Completa los datos reales y pulsa “Cerrar día”.'
+    : 'Jornada guardada. Pulsa “Terminar jornada” para abrir el formulario de cierre.';
   if (openClose) {
     $('closingPanel').classList.remove('hidden');
-    $('workFinish').classList.add('hidden');
     $('closeDay').classList.remove('hidden');
     $('closeDay').textContent = 'Cerrar día';
   } else {
@@ -194,6 +205,7 @@ function setClosedEditMode(r) {
   closeFormOpen = true;
   $('workId').value = r.id;
   $('fecha').disabled = false;
+  setInitialFieldsLocked(true);
   $('closingPanel').classList.remove('hidden');
   $('workFormTitle').textContent = 'Editar jornada cerrada';
   $('workSubmit').classList.add('hidden');
