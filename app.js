@@ -1,4 +1,4 @@
-const VERSION = 'V16.0';
+const VERSION = 'V17.0';
 let db = null;
 let cache = [];
 let calendarMonth = new Date();
@@ -14,7 +14,15 @@ const val = (id) => ($(id)?.value ?? '').trim();
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' }[c]));
 const stateOf = (r) => String(r?.estado ?? '').trim().toLowerCase();
 const isClosed = (r) => stateOf(r) === 'cerrada' || stateOf(r) === 'closed';
-const isActive = (r) => { if (!r || isClosed(r)) return false; const st = stateOf(r).replace(/_/g,' ').replace(/-/g,' '); return ['en curso','active','abierta','open','in progress'].includes(st) || (!r.hora_fin && r.km_final == null); };
+const isActive = (r) => {
+  if (!r) return false;
+  const st = stateOf(r).replace(/_/g,' ').replace(/-/g,' ');
+  // El estado persistido es la fuente principal de verdad.
+  if (['cerrada','closed','finalizada','finalizado'].includes(st)) return false;
+  if (['en curso','active','abierta','open','in progress'].includes(st)) return true;
+  // Compatibilidad con registros antiguos sin estado válido.
+  return !r.hora_fin && (r.km_final == null || r.km_final === '');
+};
 const setMsg = (id, text) => { if ($(id)) $(id).textContent = text; };
 
 function settings() {
@@ -173,12 +181,11 @@ function setStartMode() {
   $('workSubmit').hidden = false;
   $('workSubmit').classList.remove('hidden');
   $('workSubmit').textContent = 'Iniciar jornada';
-  $('workFinish').hidden = true;
-  $('workFinish').classList.add('hidden');
-  $('closeDay').hidden = true;
-  $('closeDay').classList.add('hidden');
+  $('workSubmit').type = 'button';
   $('closingPanel').hidden = true;
   $('closingPanel').classList.add('hidden');
+  $('closeDay').hidden = true;
+  $('closeDay').classList.add('hidden');
   $('workCancel').hidden = true;
   $('workCancel').classList.add('hidden');
   $('workFormTitle').textContent = 'Iniciar jornada de hoy';
@@ -188,21 +195,19 @@ function setStartMode() {
 }
 
 function setActiveMode(r, focusClose = false) {
-  // UNA JORNADA ABIERTA ES EL ESTADO DE LA BASE DE DATOS.
-  // La interfaz se fuerza a este estado, incluso si el registro proviene
-  // de una versión anterior o el navegador conserva HTML antiguo.
   closeFormOpen = true;
   $('workId').value = String(r.id);
-  $('fecha').value = r.fecha;
+  $('fecha').value = String(r.fecha).slice(0,10);
   $('fecha').disabled = true;
   setInitialFieldsLocked(true);
 
-  // Inicio bloqueado; cierre visible.
-  $('workSubmit').hidden = true;
-  $('workSubmit').classList.add('hidden');
-  $('workFinish').hidden = false;
-  $('workFinish').classList.remove('hidden');
-  $('workFinish').textContent = 'Terminar jornada';
+  // UN SOLO BOTÓN DE ESTADO: la misma acción cambia de INICIAR a TERMINAR.
+  $('workSubmit').hidden = false;
+  $('workSubmit').classList.remove('hidden');
+  $('workSubmit').disabled = false;
+  $('workSubmit').type = 'button';
+  $('workSubmit').textContent = 'Terminar jornada';
+
   $('closingPanel').hidden = false;
   $('closingPanel').classList.remove('hidden');
   $('closeDay').hidden = false;
@@ -228,9 +233,7 @@ function setClosedEditMode(r) {
   $('workFormTitle').textContent = 'Editar jornada cerrada';
   $('workSubmit').hidden = true;
   $('workSubmit').classList.add('hidden');
-  $('workFinish').hidden = true;
-  $('workFinish').classList.add('hidden');
-  $('closeDay').hidden = false;
+    $('closeDay').hidden = false;
   $('closeDay').classList.remove('hidden');
   $('closeDay').textContent = 'Guardar cambios';
   $('workCancel').hidden = false;
@@ -328,43 +331,37 @@ function validateClose() {
   return '';
 }
 
-$('workForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
+async function startJourney() {
   if (!db) return setMsg('workMsg', 'Conecta primero la base de datos.');
-  if ($('workId').value) return setMsg('workMsg', 'La jornada ya está iniciada. Usa “Terminar jornada” para completar el cierre.');
+  if ($('workId').value) {
+    const r = cache.find(x => String(x.id) === String($('workId').value)) || findActiveToday();
+    if (r) { fillRecord(r); setActiveMode(r, true); }
+    return setMsg('workMsg', 'La jornada ya está iniciada. Completa el cierre y pulsa “Cerrar día”.');
+  }
   const err = validateStart();
   if (err) return setMsg('workMsg', err);
-  if (findActiveToday()) return setMsg('workMsg', 'Ya existe una jornada en curso para hoy.');
-
+  if (findActiveToday()) {
+    const r = findActiveToday();
+    fillRecord(r);
+    setActiveMode(r, true);
+    return setMsg('workMsg', 'Ya existe una jornada en curso para hoy. Se abrió su formulario de cierre.');
+  }
   const p = projection();
   const s = settings();
   const payload = {
-    fecha: today(),
-    meta_dia: num('metaDia'),
-    horas_planificadas: num('horasPlan'),
-    hora_inicio: val('horaInicio'),
-    km_inicio: num('kmInicio'),
-    viajes: 0,
-    estado: 'en_curso',
-    notas: null,
-    plan_horas_meta: p.needHours,
-    plan_viajes: p.trips,
-    plan_km: p.km,
-    plan_combustible: p.fuel,
-    plan_mantenimiento: p.maint,
-    plan_ganancia_bruta: p.grossProjected,
-    plan_ganancia_neta: p.net,
-    plan_comision: p.grossProjected * s.comisionPct / 100
+    fecha: today(), meta_dia: num('metaDia'), horas_planificadas: num('horasPlan'),
+    hora_inicio: val('horaInicio'), km_inicio: num('kmInicio'), viajes: 0, estado: 'en_curso', notas: null,
+    plan_horas_meta: p.needHours, plan_viajes: p.trips, plan_km: p.km, plan_combustible: p.fuel,
+    plan_mantenimiento: p.maint, plan_ganancia_bruta: p.grossProjected, plan_ganancia_neta: p.net
   };
-
   $('workSubmit').disabled = true;
   setMsg('workMsg', 'Guardando jornada en Supabase…');
   const { data, error } = await db.from('jornadas_trabajo').insert(payload).select().single();
-  $('workSubmit').disabled = false;
-  if (error) return setMsg('workMsg', 'No se pudo iniciar la jornada: ' + error.message);
-
+  if (error) {
+    $('workSubmit').disabled = false;
+    return setMsg('workMsg', 'No se pudo iniciar la jornada: ' + error.message);
+  }
   localStorage.setItem('last_goal', String(payload.meta_dia));
-  // Transición inmediata y determinista: no depende de refresh, pestaña ni caché.
   cache = [data, ...cache.filter(x => String(x.id) !== String(data.id))];
   fillRecord(data);
   setActiveMode(data, true);
@@ -372,17 +369,30 @@ $('workForm').addEventListener('submit', async (e) => {
   actualCalc();
   renderDashboard();
   renderHistory();
-  setMsg('workMsg', 'Jornada iniciada y guardada. Completa el cierre y pulsa “Cerrar día”.');
+  setMsg('workMsg', 'Jornada iniciada y guardada. El botón cambió a “Terminar jornada” y el formulario de cierre está disponible.');
+}
+
+$('workSubmit').addEventListener('click', async (e) => {
+  e.preventDefault();
+  const id = $('workId').value;
+  if (id) {
+    const r = cache.find(x => String(x.id) === String(id) && isActive(x)) || findActiveToday();
+    if (!r) return setMsg('workMsg', 'No se encontró la jornada en curso. Actualiza la aplicación.');
+    fillRecord(r);
+    setActiveMode(r, true);
+    return setMsg('workMsg', 'Formulario de cierre listo. Completa los datos y pulsa “Cerrar día”.');
+  }
+  await startJourney();
 });
 
-$('workFinish').addEventListener('click', () => {
-  const r = cache.find(x => String(x.id) === String($('workId').value) && isActive(x))
-    || cache.find(x => x.fecha === today() && isActive(x));
-  if (!r) return setMsg('workMsg', 'No se encontró una jornada abierta. Actualiza la aplicación.');
-  fillRecord(r);
-  setActiveMode(r, true);
-  actualCalc();
-  setMsg('workMsg', 'Formulario de cierre listo. Completa los datos y pulsa “Cerrar día”.');
+$('workForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  // También funciona al pulsar Enter desde el formulario inicial.
+  if (!$('workId').value) await startJourney();
+  else {
+    const r = cache.find(x => String(x.id) === String($('workId').value) && isActive(x)) || findActiveToday();
+    if (r) { fillRecord(r); setActiveMode(r, true); }
+  }
 });
 
 async function finishCurrent() {
@@ -430,7 +440,7 @@ function renderClosingAnalysis(r) {
   const plan = {
     net:Number(r.plan_ganancia_neta ?? 0), gross:Number(r.plan_ganancia_bruta ?? 0), hours:Number(r.horas_planificadas || 0),
     trips:Number(r.plan_viajes ?? 0), km:Number(r.plan_km ?? 0), fuel:Number(r.plan_combustible ?? 0), maint:Number(r.plan_mantenimiento ?? 0),
-    comm:Number(r.plan_comision ?? (Number(r.plan_ganancia_bruta ?? 0) * s.comisionPct / 100))
+    comm:(r.plan_comision != null ? Number(r.plan_comision) : Number(r.plan_ganancia_bruta ?? 0) * s.comisionPct / 100)
   };
   const real = { net:Number(r.ganancia_neta || 0), gross:Number(r.ganancia_bruta || 0), hours:Number(r.horas_trabajadas || 0), trips:Number(r.viajes || 0), km:Number(r.km_recorridos || 0), fuel:Number(r.combustible || 0), maint:Number(r.mantenimiento || 0), comm:Number(r.comision_app || 0) };
   const rows = [

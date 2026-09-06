@@ -1,4 +1,4 @@
-# Control de Trabajo V16.0
+# Control de Trabajo V17.0
 
 Versión definitiva del flujo en dos etapas:
 1. Iniciar jornada guarda inmediatamente los datos iniciales y el plan proyectado en Supabase.
@@ -9,6 +9,6 @@ Versión definitiva del flujo en dos etapas:
 Sube todos los archivos de esta carpeta a GitHub Pages y ejecuta `supabase_jornadas.sql` en Supabase.
 
 
-## Corrección V16.0
+## Corrección V17.0
 
 Flujo definitivo: Iniciar jornada guarda inmediatamente en Supabase y cambia la interfaz a jornada en curso; el formulario de cierre aparece debajo del plan proyectado. Terminar jornada solo abre/focaliza el cierre. Cerrar día actualiza el mismo registro a cerrada y genera el análisis Meta/Plan/Real. El estado se sincroniza al cargar la aplicación para que una jornada en curso no vuelva a mostrar el botón Iniciar. El botón Terminar jornada del Historial abre la jornada específica y su formulario de cierre.
