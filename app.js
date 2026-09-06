@@ -1,4 +1,4 @@
-const VERSION = 'V15.0';
+const VERSION = 'V16.0';
 let db = null;
 let cache = [];
 let calendarMonth = new Date();
@@ -6,13 +6,15 @@ let closeFormOpen = false;
 
 const $ = (id) => document.getElementById(id);
 const CLP = (n) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(Number(n) || 0);
-const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const recordDate = (r) => String(r?.fecha ?? '').slice(0, 10);
+const isTodayRecord = (r) => recordDate(r) === today();
 const num = (id) => Math.max(0, Number($(id)?.value) || 0);
 const val = (id) => ($(id)?.value ?? '').trim();
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' }[c]));
 const stateOf = (r) => String(r?.estado ?? '').trim().toLowerCase();
 const isClosed = (r) => stateOf(r) === 'cerrada' || stateOf(r) === 'closed';
-const isActive = (r) => !!r && !isClosed(r) && (['en_curso','en curso','en-curso','active','abierta','open'].includes(stateOf(r)) || !r.hora_fin || r.km_final == null);
+const isActive = (r) => { if (!r || isClosed(r)) return false; const st = stateOf(r).replace(/_/g,' ').replace(/-/g,' '); return ['en curso','active','abierta','open','in progress'].includes(st) || (!r.hora_fin && r.km_final == null); };
 const setMsg = (id, text) => { if ($(id)) $(id).textContent = text; };
 
 function settings() {
@@ -279,8 +281,12 @@ function projectionFromRecord(r) {
   return p;
 }
 
+function findActiveToday() {
+  return cache.find(r => isTodayRecord(r) && isActive(r)) || null;
+}
+
 function loadTodayActive() {
-  const active = cache.find(r => r.fecha === today() && isActive(r));
+  const active = findActiveToday();
   if (active) {
     fillRecord(active);
     setActiveMode(active);
@@ -291,10 +297,7 @@ function loadTodayActive() {
 }
 
 function syncJourneyUI() {
-  // La UI se deriva del registro real guardado. Si existe una jornada abierta
-  // para hoy, SIEMPRE se muestra el modo EN CURSO, independientemente de
-  // mayúsculas/minúsculas o de si la jornada fue creada en una versión anterior.
-  const active = cache.find(r => r.fecha === today() && isActive(r));
+  const active = findActiveToday();
   if (active) {
     fillRecord(active);
     setActiveMode(active);
@@ -328,12 +331,13 @@ function validateClose() {
 $('workForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!db) return setMsg('workMsg', 'Conecta primero la base de datos.');
-  if ($('workId').value) return setMsg('workMsg', 'La jornada ya está iniciada. Pulsa “Terminar jornada” para abrir el cierre.');
+  if ($('workId').value) return setMsg('workMsg', 'La jornada ya está iniciada. Usa “Terminar jornada” para completar el cierre.');
   const err = validateStart();
   if (err) return setMsg('workMsg', err);
-  if (cache.some(r => r.fecha === today() && isActive(r))) return setMsg('workMsg', 'Ya existe una jornada en curso para hoy.');
+  if (findActiveToday()) return setMsg('workMsg', 'Ya existe una jornada en curso para hoy.');
 
   const p = projection();
+  const s = settings();
   const payload = {
     fecha: today(),
     meta_dia: num('metaDia'),
@@ -350,19 +354,25 @@ $('workForm').addEventListener('submit', async (e) => {
     plan_mantenimiento: p.maint,
     plan_ganancia_bruta: p.grossProjected,
     plan_ganancia_neta: p.net,
-    plan_comision: p.grossProjected * settings().comisionPct / 100
+    plan_comision: p.grossProjected * s.comisionPct / 100
   };
 
+  $('workSubmit').disabled = true;
+  setMsg('workMsg', 'Guardando jornada en Supabase…');
   const { data, error } = await db.from('jornadas_trabajo').insert(payload).select().single();
-  if (error) return setMsg('workMsg', error.message);
+  $('workSubmit').disabled = false;
+  if (error) return setMsg('workMsg', 'No se pudo iniciar la jornada: ' + error.message);
+
   localStorage.setItem('last_goal', String(payload.meta_dia));
-  await refresh();
-  const r = cache.find(x => String(x.id) === String(data.id)) || data;
-  fillRecord(r);
-  syncJourneyUI();
-  renderProjection(projectionFromRecord(r));
-  setMsg('workMsg', 'Jornada iniciada y guardada en Supabase. El plan quedó congelado para esta jornada.');
-  $('workFormTitle').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Transición inmediata y determinista: no depende de refresh, pestaña ni caché.
+  cache = [data, ...cache.filter(x => String(x.id) !== String(data.id))];
+  fillRecord(data);
+  setActiveMode(data, true);
+  renderProjection(projectionFromRecord(data));
+  actualCalc();
+  renderDashboard();
+  renderHistory();
+  setMsg('workMsg', 'Jornada iniciada y guardada. Completa el cierre y pulsa “Cerrar día”.');
 });
 
 $('workFinish').addEventListener('click', () => {
@@ -463,7 +473,8 @@ $('historialLista').addEventListener('click', (e) => {
 
   // Para una jornada abierta, Historial hace exactamente lo mismo que
   // “Terminar jornada”: abre Registrar jornada y deja visible el cierre.
-  document.querySelector('[data-tab="jornadas"]').click();
+  const tab = document.querySelector('[data-tab="jornadas"]');
+  if (tab) tab.click();
   fillRecord(r);
   if (isActive(r)) {
     setActiveMode(r, true);
@@ -489,7 +500,7 @@ function summary(m) {
   return { rs, h:sum('horas_trabajadas'), km:sum('km_recorridos'), trips:sum('viajes'), gross:sum('ganancia_bruta'), net:sum('ganancia_neta'), fuel:sum('combustible'), maint:sum('mantenimiento'), comm:sum('comision_app'), goals:sum('meta_dia') };
 }
 
-function todayRecord() { return cache.find(r => r.fecha === today()) || null; }
+function todayRecord() { return cache.find(r => isTodayRecord(r)) || null; }
 
 function renderTodayDashboard() {
   const r = todayRecord();
