@@ -1,4 +1,4 @@
-const VERSION = 'V13.0';
+const VERSION = 'V14.0';
 let db = null;
 let cache = [];
 let calendarMonth = new Date();
@@ -77,7 +77,7 @@ document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('cli
   if (b.dataset.tab === 'dashboard') renderDashboard();
   if (b.dataset.tab === 'historial') renderHistory();
   if (b.dataset.tab === 'calendario') renderCalendar();
-  if (b.dataset.tab === 'jornadas') loadTodayActive();
+  if (b.dataset.tab === 'jornadas') syncJourneyUI();
 }));
 
 function hoursBetween(a, b) {
@@ -257,8 +257,26 @@ function projectionFromRecord(r) {
 
 function loadTodayActive() {
   const active = cache.find(r => r.fecha === today() && r.estado === 'en_curso');
-  if (active) { fillRecord(active); setActiveMode(active, true); }
-  else { clearForm(); }
+  if (active) {
+    fillRecord(active);
+    setActiveMode(active);
+    return active;
+  }
+  clearForm();
+  return null;
+}
+
+function syncJourneyUI() {
+  // Sincroniza SIEMPRE la pantalla con Supabase/cache, incluso al recargar
+  // la página. No depende de que la pestaña Registrar esté activa.
+  const active = cache.find(r => r.fecha === today() && r.estado === 'en_curso');
+  if (active) {
+    fillRecord(active);
+    setActiveMode(active);
+    return active;
+  }
+  setStartMode();
+  return null;
 }
 
 function validateStart() {
@@ -316,16 +334,18 @@ $('workForm').addEventListener('submit', async (e) => {
   await refresh();
   const r = cache.find(x => String(x.id) === String(data.id)) || data;
   fillRecord(r);
-  setActiveMode(r, true);
+  syncJourneyUI();
   renderProjection(projectionFromRecord(r));
   setMsg('workMsg', 'Jornada iniciada y guardada en Supabase. El plan quedó congelado para esta jornada.');
   $('workFormTitle').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 $('workFinish').addEventListener('click', () => {
-  const r = cache.find(x => String(x.id) === String($('workId').value));
+  const r = cache.find(x => String(x.id) === String($('workId').value) && x.estado === 'en_curso')
+    || cache.find(x => x.fecha === today() && x.estado === 'en_curso');
   if (!r) return setMsg('workMsg', 'No se encontró la jornada en curso. Actualiza la aplicación.');
-  setActiveMode(r, true);
+  fillRecord(r);
+  setActiveMode(r);
   actualCalc();
   $('closingPanel').scrollIntoView({ behavior:'smooth', block:'start' });
   $('horaFin').focus();
@@ -406,15 +426,26 @@ function renderHistory() {
 $('historialLista').addEventListener('click', (e) => {
   const edit = e.target.closest('.history-edit');
   const del = e.target.closest('.history-delete');
-  if (edit) {
-    const r = cache.find(x => String(x.id) === String(edit.dataset.id));
-    if (!r) return;
-    fillRecord(r);
-    document.querySelector('[data-tab="jornadas"]').click();
-    if (r.estado === 'en_curso') setActiveMode(r, true); else setClosedEditMode(r);
-    $('closingPanel').scrollIntoView({ behavior:'smooth', block:'start' });
+  if (del) {
+    e.preventDefault();
+    e.stopPropagation();
+    window.deleteWork(del.dataset.id);
+    return;
   }
-  if (del) window.deleteWork(del.dataset.id);
+  if (!edit) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const r = cache.find(x => String(x.id) === String(edit.dataset.id));
+  if (!r) return setMsg('workMsg', 'No se encontró la jornada seleccionada.');
+  fillRecord(r);
+  document.querySelector('[data-tab="jornadas"]').click();
+  if (r.estado === 'en_curso') {
+    setActiveMode(r);
+    $('closingPanel').classList.remove('hidden');
+  } else {
+    setClosedEditMode(r);
+  }
+  $('closingPanel').scrollIntoView({ behavior:'smooth', block:'start' });
 });
 
 window.deleteWork = async (id) => {
@@ -496,8 +527,8 @@ async function refresh(){
   const {data,error}=await db.from('jornadas_trabajo').select('*').order('fecha',{ascending:false}).order('created_at',{ascending:false});
   if(error){console.error(error);return setMsg('configMsg','Conectado, pero no se pudieron leer las jornadas: '+error.message);}
   cache=data||[];
+  syncJourneyUI();
   renderDashboard(); renderHistory(); renderCalendar();
-  if(document.querySelector('[data-tab="jornadas"]')?.classList.contains('active')) loadTodayActive();
 }
 
 ['metaDia','horasPlan','horaInicio','kmInicio','horaFin','kmFinal','viajes','combustible','bruta','comision'].forEach(id=>$(id).addEventListener('input',()=>{renderProjection();actualCalc();}));
