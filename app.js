@@ -1,4 +1,4 @@
-const VERSION = 'V12.0';
+const VERSION = 'V13.0';
 let db = null;
 let cache = [];
 let calendarMonth = new Date();
@@ -172,33 +172,29 @@ function setStartMode() {
   $('closeDay').classList.add('hidden');
   $('workCancel').classList.add('hidden');
   $('workFormTitle').textContent = 'Iniciar jornada de hoy';
-  $('closingNote').textContent = 'La jornada aún no está iniciada.';
+  $('closingNote').textContent = 'El formulario de cierre aparecerá al iniciar la jornada.';
   $('fecha').disabled = true;
   setInitialFieldsLocked(false);
 }
 
-function setActiveMode(r, openClose = false) {
-  closeFormOpen = openClose;
+function setActiveMode(r, openClose = true) {
+  // Una jornada en curso siempre debe mostrar el formulario de cierre
+  // después del plan proyectado. El botón "Terminar jornada" no cierra
+  // la jornada: solo lleva/focaliza el formulario de cierre.
+  closeFormOpen = true;
   $('workId').value = r.id;
   $('fecha').value = r.fecha;
   $('fecha').disabled = true;
   setInitialFieldsLocked(true);
   $('workSubmit').classList.add('hidden');
-  $('workFinish').classList.toggle('hidden', openClose);
+  $('workFinish').classList.remove('hidden');
   $('workFinish').textContent = 'Terminar jornada';
   $('workCancel').classList.remove('hidden');
   $('workFormTitle').textContent = 'Jornada en curso';
-  $('closingNote').textContent = openClose
-    ? 'Completa los datos reales y pulsa “Cerrar día”.'
-    : 'Jornada guardada. Pulsa “Terminar jornada” para abrir el formulario de cierre.';
-  if (openClose) {
-    $('closingPanel').classList.remove('hidden');
-    $('closeDay').classList.remove('hidden');
-    $('closeDay').textContent = 'Cerrar día';
-  } else {
-    $('closingPanel').classList.add('hidden');
-    $('closeDay').classList.add('hidden');
-  }
+  $('closingNote').textContent = 'Completa los datos reales de cierre y pulsa “Cerrar día” para finalizar la jornada.';
+  $('closingPanel').classList.remove('hidden');
+  $('closeDay').classList.remove('hidden');
+  $('closeDay').textContent = 'Cerrar día';
 }
 
 function setClosedEditMode(r) {
@@ -261,7 +257,7 @@ function projectionFromRecord(r) {
 
 function loadTodayActive() {
   const active = cache.find(r => r.fecha === today() && r.estado === 'en_curso');
-  if (active) { fillRecord(active); setActiveMode(active, closeFormOpen); }
+  if (active) { fillRecord(active); setActiveMode(active, true); }
   else { clearForm(); }
 }
 
@@ -320,7 +316,7 @@ $('workForm').addEventListener('submit', async (e) => {
   await refresh();
   const r = cache.find(x => String(x.id) === String(data.id)) || data;
   fillRecord(r);
-  setActiveMode(r, false);
+  setActiveMode(r, true);
   renderProjection(projectionFromRecord(r));
   setMsg('workMsg', 'Jornada iniciada y guardada en Supabase. El plan quedó congelado para esta jornada.');
   $('workFormTitle').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -331,8 +327,9 @@ $('workFinish').addEventListener('click', () => {
   if (!r) return setMsg('workMsg', 'No se encontró la jornada en curso. Actualiza la aplicación.');
   setActiveMode(r, true);
   actualCalc();
-  $('closingPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  setMsg('workMsg', 'Formulario de cierre abierto. Completa los datos reales y pulsa “Cerrar día”.');
+  $('closingPanel').scrollIntoView({ behavior:'smooth', block:'start' });
+  $('horaFin').focus();
+  setMsg('workMsg', 'Formulario de cierre listo. Completa los datos y pulsa “Cerrar día”.');
 });
 
 async function finishCurrent() {

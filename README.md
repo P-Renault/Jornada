@@ -1,4 +1,4 @@
-# Control de Trabajo V12.0
+# Control de Trabajo V13.0
 
 Versión definitiva del flujo en dos etapas:
 1. Iniciar jornada guarda inmediatamente los datos iniciales y el plan proyectado en Supabase.
