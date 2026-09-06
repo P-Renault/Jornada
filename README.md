@@ -1,19 +1,8 @@
-# Control de Trabajo V2
+CONTROL DE TRABAJO V9
 
-PWA móvil para registrar jornadas de conducción usando Supabase.
+Flujo de dos etapas:
+1) Iniciar jornada: fecha actual, meta, horas planificadas, hora de inicio y km inicial. Guarda inmediatamente en Supabase y congela el plan proyectado.
+2) Terminar jornada: despliega el formulario de cierre con hora fin, km final, viajes, ganancia bruta, combustible real opcional, comisión real opcional y notas. El botón Cerrar día calcula, guarda y cierra la jornada.
+3) Al cerrar: muestra análisis Meta vs Plan vs Real y actualiza Resumen, Historial y Calendario.
 
-## V2
-- Meta diaria ingresada antes de la jornada.
-- Combustible estimado automáticamente: km recorridos / rendimiento x precio por litro.
-- Mantenimiento estimado automáticamente: km recorridos x costo de mantenimiento/km.
-- Comisión estimada automáticamente mediante porcentaje configurable (por defecto 20%).
-- Posibilidad de reemplazar combustible o comisión por el valor real ingresado.
-- Ganancia neta y diferencia contra la meta calculadas automáticamente.
-- Resumen mensual y cumplimiento de metas.
-
-## Instalación
-1. Ejecuta `supabase_jornadas.sql` en SQL Editor de Supabase.
-2. Publica esta carpeta en GitHub Pages.
-3. Abre la app en el teléfono.
-4. Introduce URL y Publishable Key de Supabase.
-5. Configura vehículo, rendimiento, precio de combustible, mantenimiento/km y comisión %.
+Supabase: ejecutar supabase_jornadas.sql antes de usar la V9.
