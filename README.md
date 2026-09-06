@@ -1,18 +1,7 @@
-# Control de Trabajo V18.3
+# Control de Trabajo V19.0
 
-PAQUETE DIRECTO PARA GITHUB PAGES.
+Para GitHub Pages, publica estos archivos directamente en la carpeta que sirve Pages. `index.html` debe estar en la raíz de la carpeta publicada.
 
-IMPORTANTE: GitHub Pages no ejecuta un ZIP subido como archivo. Debes extraer/reemplazar los archivos en la carpeta publicada del repositorio. `index.html` debe quedar en la raíz de la carpeta que GitHub Pages publica.
+Archivos: index.html, app.js, styles.css, manifest opcional, supabase_jornadas.sql.
 
-Archivos principales:
-- index.html
-- app.js
-- styles.css
-- manifest.json
-
-Flujo:
-1. Iniciar jornada guarda los datos iniciales y el plan en Supabase.
-2. El botón cambia a Terminar jornada y aparece el formulario de cierre.
-3. Terminar jornada solo abre/focaliza el cierre.
-4. Cerrar día actualiza el mismo registro a cerrada.
-5. Se muestra Meta vs Plan vs Real y la jornada queda en Historial.
+Flujo: Iniciar jornada guarda solo los datos iniciales y el plan. Después cambia a Terminar jornada y muestra el formulario de cierre. Cerrar día actualiza el mismo registro y deja la jornada cerrada en historial.
