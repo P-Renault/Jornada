@@ -1,18 +1,10 @@
-# B20 S01 v1.1
+# B20 S02 — Changelog
 
-- Corrección del cierre de jornada para instalaciones donde `km_recorridos` y/o `horas_trabajadas` son columnas generadas/calculadas.
-- El primer UPDATE solo escribe campos editables.
-- Las columnas derivadas se intentan completar únicamente si Supabase las devuelve vacías.
-- Cache-bust actualizado a `b20-s01-1.1`.
-- No requiere SQL.
-- No elimina ni migra registros.
-
-# Changelog
-
-## B20 S01 1.0.0 — 2026-09-20
-- Primer módulo desplegable.
-- No requiere SQL.
-- Preserva `jornadas_trabajo`.
-- Añade motor de planificación neta corregido.
-- Añade métricas de observación.
-- Elimina del flujo S01 la eliminación física de jornadas.
+## v1.0 — Parámetros y configuración
+- Separación de namespace S02 (`b20s2_`) para evitar colisiones con S01.
+- Validación de parámetros.
+- Persistencia local explícita.
+- Exportación/importación JSON.
+- Restauración de defaults.
+- Resumen y timestamp del último guardado.
+- Sin SQL y sin cambios destructivos.
