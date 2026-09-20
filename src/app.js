@@ -51,9 +51,37 @@ async function closeActive(){
   const kmFinal=num('kmFinal');
   if(!val('horaFin')||kmFinal<Number(active.km_inicio||0)){msg('Completa hora fin y un Km final válido.');return;}
   const result=closeJourney({startTime:active.hora_inicio,endTime:val('horaFin'),kmStart:active.km_inicio,kmEnd:kmFinal,trips:num('viajes'),gross:num('bruta'),fuelReal:val('combustible'),commissionReal:val('comision'),settings:settings()});
-  const payload={hora_fin:val('horaFin'),km_final:kmFinal,viajes:result.trips,combustible:result.fuel,mantenimiento:result.maintenance,ganancia_bruta:result.gross,comision_app:result.commission,ganancia_neta:result.net,notas:val('notas')||null,estado:'cerrada',horas_trabajadas:result.hours,km_recorridos:result.km};
+  // Importante: km_recorridos y horas_trabajadas pueden ser columnas generadas/calculadas
+  // en instalaciones V19/V20.3. No se envían en el primer UPDATE para evitar que
+  // PostgreSQL rechace el cierre por intentar escribir una columna generada.
+  const editablePayload={hora_fin:val('horaFin'),km_final:kmFinal,viajes:result.trips,combustible:result.fuel,mantenimiento:result.maintenance,ganancia_bruta:result.gross,comision_app:result.commission,ganancia_neta:result.net,notas:val('notas')||null,estado:'cerrada'};
   $('close').disabled=true;msg('Cerrando jornada…');
-  try{const r=await withTimeout(db.from('jornadas_trabajo').update(payload).eq('id',active.id).select('id,estado'));if(r.error)throw r.error;if(!r.data?.length)throw new Error('Supabase no confirmó el cierre.');active=null;['horaFin','kmFinal','viajes','bruta','combustible','comision','notas'].forEach(id=>$(id).value='');await load();msg('Jornada cerrada correctamente.');}catch(e){msg(`No se pudo cerrar: ${e.message}`);}finally{$('close').disabled=false;}
+  try{
+    const r=await withTimeout(db.from('jornadas_trabajo').update(editablePayload).eq('id',active.id).select('id,estado,km_recorridos,horas_trabajadas'));
+    if(r.error)throw r.error;
+    if(!r.data?.length)throw new Error('Supabase no confirmó el cierre.');
+    const saved=r.data[0];
+    // Si la instalación no calcula automáticamente las columnas derivadas,
+    // intentamos completarlas en un segundo UPDATE. Si son GENERATED, se ignora
+    // ese segundo intento porque el cierre editable ya quedó guardado.
+    const missingKm=saved.km_recorridos==null;
+    const missingHours=saved.horas_trabajadas==null;
+    if(missingKm||missingHours){
+      const derivedPayload={};
+      if(missingKm)derivedPayload.km_recorridos=result.km;
+      if(missingHours)derivedPayload.horas_trabajadas=result.hours;
+      const d=await withTimeout(db.from('jornadas_trabajo').update(derivedPayload).eq('id',active.id).select('id'));
+      // Si falla por columna generada/RLS, no revertimos el cierre principal.
+      // La jornada ya está cerrada y los campos editables quedaron persistidos.
+      if(d.error){ console.warn('Campos derivados no actualizados; el cierre principal fue guardado.',d.error); }
+    }
+    active=null;
+    ['horaFin','kmFinal','viajes','bruta','combustible','comision','notas'].forEach(id=>$(id).value='');
+    await load();
+    msg('Jornada cerrada correctamente.');
+  }catch(e){
+    msg(`No se pudo cerrar: ${e.message}`);
+  }finally{$('close').disabled=false;}
 }
 $('connect').onclick=async()=>{try{const u=val('url').trim(),k=val('key').trim();if(!/^https:\/\/[^\s]+\.supabase\.co$/.test(u)||!k)throw new Error('URL o Publishable Key inválida.');db=window.supabase.createClient(u,k);const t=await withTimeout(db.from('jornadas_trabajo').select('id').limit(1));if(t.error)throw t.error;localStorage.setItem('b20s1_url',u);localStorage.setItem('b20s1_key',k);$('config').hidden=true;$('app').hidden=false;await load();}catch(e){$('msg').textContent=`No se pudo conectar: ${e.message}`;}};
 $('start').onclick=startJourney;$('close').onclick=closeActive;$('histMonth').onchange=renderHistory;$('saveSettings').onclick=saveSettings;
