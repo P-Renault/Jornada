@@ -9,7 +9,7 @@ const today = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.
 const DEFAULTS={efficiencyKmL:13,fuelPrice:1635,maintenancePerKm:0.03,commissionPct:20,netPerHour:8000,tripsPerHour:2,kmPerHour:20};
 let db=null, rows=[], active=null;
 
-function settings(){const s={};for(const k of Object.keys(DEFAULTS)){const raw=localStorage.getItem(`b20s2_${k}`);const n=Number(raw);s[k]=Number.isFinite(n)?n:DEFAULTS[k];}return s;}
+function settings(){const s={};for(const k of Object.keys(DEFAULTS)){const raw=localStorage.getItem(`b20s2_${k}`);const n=raw===null||raw===''?DEFAULTS[k]:Number(raw);s[k]=Number.isFinite(n)?n:DEFAULTS[k];}return s;}
 function validateSettings(s){
   if(s.efficiencyKmL<=0) return 'El rendimiento debe ser mayor que 0 km/L.';
   if(s.fuelPrice<0) return 'El precio de combustible no puede ser negativo.';
