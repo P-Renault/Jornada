@@ -1,0 +1,8 @@
+{
+  "name": "control-trabajo-b20-s01",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "B20 Sprint S01 - recolección y observación de jornadas",
+  "scripts": {"test": "node tests/s01_smoke.mjs"}
+}
