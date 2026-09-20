@@ -1,9 +1,3 @@
-# B20 S01 — SQL
+# S02 — No SQL requerido
 
-Este paquete **no requiere ejecutar SQL**.
-
-La versión S01 trabaja únicamente con la tabla existente `public.jornadas_trabajo` y no crea, elimina ni altera tablas.
-
-Objetivo: validar la capa de observación y recolección sin afectar V19/V20.3.
-
-Cuando S01 sea aceptado, el siguiente paquete podrá incorporar migraciones aditivas para parámetros persistentes y entidades B20.
+Este sprint utiliza localStorage con namespace `b20s2_` y no modifica Supabase.
