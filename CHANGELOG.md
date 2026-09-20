@@ -9,3 +9,5 @@
 ## v1.0
 - Parámetros locales con namespace `b20s2_`.
 - Guardar/restaurar/exportar/importar.
+
+- v1.2: auto-recuperación de valores cero heredados de S02 v1.0/v1.1 y visualización de mantenimiento con 2 decimales.

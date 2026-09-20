@@ -3,13 +3,14 @@ import { planNetGoal, closeJourney, metrics, hoursBetween, round } from './b20-c
 
 const $ = id => document.getElementById(id);
 const money = n => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(Number(n)||0);
+const moneyKm = n => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0);
 const num = id => Number($(id).value)||0;
 const val = id => $(id).value;
 const today = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 const DEFAULTS={efficiencyKmL:13,fuelPrice:1635,maintenancePerKm:0.03,commissionPct:20,netPerHour:8000,tripsPerHour:2,kmPerHour:20};
 let db=null, rows=[], active=null;
 
-function settings(){const s={};for(const k of Object.keys(DEFAULTS)){const raw=localStorage.getItem(`b20s2_${k}`);const n=raw===null||raw===''?DEFAULTS[k]:Number(raw);s[k]=Number.isFinite(n)?n:DEFAULTS[k];}return s;}
+function settings(){const s={};for(const k of Object.keys(DEFAULTS)){const raw=localStorage.getItem(`b20s2_${k}`);const n=raw===null||raw===''?DEFAULTS[k]:Number(raw);s[k]=Number.isFinite(n)?n:DEFAULTS[k];} const legacyZero = s.efficiencyKmL<=0 || s.fuelPrice<=0 || s.netPerHour<=0 || s.tripsPerHour<=0 || s.kmPerHour<=0; if(legacyZero){for(const k of Object.keys(DEFAULTS)){if(k!=='commissionPct' && k!=='maintenancePerKm') s[k]=DEFAULTS[k];} if(s.commissionPct<0||s.commissionPct>=100)s.commissionPct=DEFAULTS.commissionPct; if(s.maintenancePerKm<0)s.maintenancePerKm=DEFAULTS.maintenancePerKm;} return s;}
 function validateSettings(s){
   if(s.efficiencyKmL<=0) return 'El rendimiento debe ser mayor que 0 km/L.';
   if(s.fuelPrice<0) return 'El precio de combustible no puede ser negativo.';
@@ -26,7 +27,7 @@ function saveSettings(){
 }
 function resetSettings(){for(const k of Object.keys(DEFAULTS)) localStorage.removeItem(`b20s2_${k}`);loadSettingsIntoForm();render();$('settingsStatus').textContent='Valores base restaurados.';msg('Valores base restaurados.');}
 function loadSettingsIntoForm(){const s=settings();for(const k of Object.keys(DEFAULTS))$(k).value=s[k];}
-function renderSettings(){const s=settings();$('settingsSummary').innerHTML=[['Rendimiento',`${s.efficiencyKmL} km/L`],['Combustible',money(s.fuelPrice)+'/L'],['Mantenimiento',money(s.maintenancePerKm)+'/km'],['Comisión',`${s.commissionPct}%`],['Neto/hora',money(s.netPerHour)],['Viajes/hora',s.tripsPerHour],['Km/hora',s.kmPerHour]].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join('');const ts=localStorage.getItem('b20s2_saved_at');$('settingsStatus').textContent=ts?`Último guardado: ${new Date(ts).toLocaleString('es-CL')}`:'Usando valores base o no guardados.';}
+function renderSettings(){const s=settings();$('settingsSummary').innerHTML=[['Rendimiento',`${s.efficiencyKmL} km/L`],['Combustible',money(s.fuelPrice)+'/L'],['Mantenimiento',moneyKm(s.maintenancePerKm)+'/km'],['Comisión',`${s.commissionPct}%`],['Neto/hora',money(s.netPerHour)],['Viajes/hora',s.tripsPerHour],['Km/hora',s.kmPerHour]].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join('');const ts=localStorage.getItem('b20s2_saved_at');$('settingsStatus').textContent=ts?`Último guardado: ${new Date(ts).toLocaleString('es-CL')}`:'Usando valores base o no guardados.';}
 function exportSettings(){const payload={version:'B20-S02-1.0',exportedAt:new Date().toISOString(),settings:settings()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`b20-parametros-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 async function importSettingsFile(file){try{const text=await file.text();const data=JSON.parse(text);const s=data.settings||data;const merged={};for(const k of Object.keys(DEFAULTS)) merged[k]=Number(s[k]??DEFAULTS[k]);const error=validateSettings(merged);if(error)throw new Error(error);for(const k of Object.keys(DEFAULTS))localStorage.setItem(`b20s2_${k}`,String(merged[k]));localStorage.setItem('b20s2_saved_at',new Date().toISOString());loadSettingsIntoForm();render();msg('Configuración importada correctamente.');}catch(e){msg(`No se pudo importar: ${e.message}`);$('settingsStatus').textContent=e.message;}}
 
