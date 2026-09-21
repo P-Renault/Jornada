@@ -1,1 +1,1 @@
-{"name":"control-trabajo-b20-s03","version":"1.0.0","private":true,"type":"module","scripts":{"test":"node tests/s03_smoke.mjs"}}
+{"name":"b20-s04-combustible","private":true,"type":"module","scripts":{"test":"node tests/s04_smoke.mjs"}}

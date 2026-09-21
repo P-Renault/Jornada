@@ -1,7 +1,8 @@
-# B20 S03
+# Changelog
 
-## v1.3
-- Distingue odómetro absoluto actual de kilometraje de jornadas históricas/pruebas.
-- No calcula diferencias falsas entre 187.760 km y registros relativos como 80 km.
-- Nuevas jornadas toman como Km inicio el odómetro actual guardado cuando existe.
-- No modifica Supabase ni registros históricos.
+## S04 v1.0
+- Added fuel/cost module with local persistence.
+- Added absolute odometer validation against S03 reference.
+- Added observed fuel cost, km/L and cost/km summaries.
+- Added JSON export/import.
+- No SQL or Supabase schema changes.
