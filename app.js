@@ -190,7 +190,38 @@ function saveFuel(){
 }
 function exportFuel(){const payload={version:'B20-S04-1.1',exportedAt:new Date().toISOString(),records:fuelRecords()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`b20-combustible-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 async function importFuelFile(file){try{const d=JSON.parse(await file.text());const list=Array.isArray(d.records)?d.records:[];if(!list.length)throw new Error('El archivo no contiene cargas.');for(const r of list){if(!(Number(r.km)>0&&Number(r.litros)>0&&Number(r.precio)>0))throw new Error('El archivo contiene una carga inválida.');}saveFuelRecords(list);renderFuel();msg('Historial de combustible importado.');}catch(e){msg(`No se pudo importar combustible: ${e.message}`);}}
-function render(){renderPlan();renderActive();renderFormIdle();renderMetrics();renderHistory();renderSettings();renderVehicle();renderFuel();}
+
+// ===== S05: Mantenciones y componentes (persistencia local durante validación) =====
+const MAINT_KEY='b20s5_maintenance_records';
+const COMP_KEY='b20s5_component_records';
+function jsonList(key){try{const x=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(x)?x:[];}catch{return [];}}
+function putList(key,list){localStorage.setItem(key,JSON.stringify(list));}
+function maintenanceRecords(){return jsonList(MAINT_KEY);}
+function componentRecords(){return jsonList(COMP_KEY);}
+function renderMaintenance(){
+ const list=maintenanceRecords().sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha))||Number(b.km)-Number(a.km));
+ const total=list.reduce((s,r)=>s+Number(r.costo||0),0);
+ const preventive=list.filter(r=>r.tipo==='preventiva').length;
+ const corrective=list.filter(r=>r.tipo==='correctiva').length;
+ const pending=list.filter(r=>(r.proximoKm&&Number(r.proximoKm)>0)||(r.proximaFecha)).length;
+ $('maintSummary').innerHTML=[['Intervenciones',list.length],['Costo acumulado',money(total)],['Preventivas',preventive],['Correctivas',corrective],['Con próximo hito',pending]].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join('');
+ $('maintHistory').innerHTML=list.length?list.map(r=>`<article class="item"><div class="row"><b>${String(r.fecha).slice(0,10)} · ${r.concepto||'Sin concepto'}</b><span>${r.tipo}</span></div><div class="mini-grid"><span>Km <b>${Number(r.km).toLocaleString('es-CL')}</b></span><span>Costo <b>${money(r.costo)}</b></span><span>Próx. km <b>${r.proximoKm?Number(r.proximoKm).toLocaleString('es-CL'):'—'}</b></span><span>Próx. fecha <b>${r.proximaFecha||'—'}</b></span></div><div class="muted">${r.nota||'Sin observaciones'}</div></article>`).join(''):'<div class="empty">Sin mantenciones registradas.</div>';
+}
+function renderComponents(){
+ const list=componentRecords();
+ const active=list.filter(r=>r.estado==='activo');
+ const total=list.reduce((s,r)=>s+Number(r.costo||0),0);
+ $('compSummary').innerHTML=[['Componentes',list.length],['Activos',active.length],['Costo acumulado',money(total)]].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join('');
+ $('compHistory').innerHTML=list.length?list.map(r=>{const current=vehicleOdometer();const used=(current>0&&Number(r.km)>0)?Math.max(0,current-Number(r.km)):null;const remaining=(used!=null&&Number(r.vidaKm)>0)?Math.max(0,Number(r.vidaKm)-used):null;return `<article class="item"><div class="row"><b>${r.nombre}</b><span>${r.estado}</span></div><div class="mini-grid"><span>Marca <b>${r.marca||'—'}</b></span><span>Modelo <b>${r.modelo||'—'}</b></span><span>Instalación <b>${r.km?Number(r.km).toLocaleString('es-CL'):'—'} km</b></span><span>Costo <b>${money(r.costo)}</b></span></div><div class="muted">Vida estimada: ${r.vidaKm?Number(r.vidaKm).toLocaleString('es-CL')+' km':'—'} · Restante estimado: ${remaining!=null?remaining.toLocaleString('es-CL')+' km':'—'}</div></article>`}).join(''):'<div class="empty">Sin componentes registrados.</div>';
+}
+function clearMaintForm(){['maintDate','maintKm','maintCost','maintConcept','maintNextKm','maintNextDate','maintNote'].forEach(id=>$(id).value='');$('maintType').value='preventiva';}
+function saveMaint(){const rec={id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,fecha:val('maintDate')||today(),km:Number(val('maintKm'))||0,tipo:val('maintType'),costo:Number(val('maintCost'))||0,concepto:val('maintConcept').trim(),proximoKm:Number(val('maintNextKm'))||0,proximaFecha:val('maintNextDate')||null,nota:val('maintNote').trim()||null};const ref=vehicleOdometer();if(rec.km<=0||rec.costo<0||!rec.concepto){msg('Completa fecha, km, concepto y costo de la mantención.');return;}if(ref>0&&rec.km>ref){msg(`El km de la mantención (${rec.km}) no puede superar el odómetro actual (${ref}) durante esta validación.`);return;}const list=maintenanceRecords();list.push(rec);putList(MAINT_KEY,list);clearMaintForm();renderMaintenance();msg('Mantención registrada.');}
+function clearCompForm(){['compName','compBrand','compModel','compDate','compKm','compCost','compLifeKm'].forEach(id=>$(id).value='');$('compStatus').value='activo';}
+function saveComp(){const rec={id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,nombre:val('compName').trim(),marca:val('compBrand').trim(),modelo:val('compModel').trim(),fecha:val('compDate')||today(),km:Number(val('compKm'))||0,costo:Number(val('compCost'))||0,vidaKm:Number(val('compLifeKm'))||0,estado:val('compStatus')};const ref=vehicleOdometer();if(!rec.nombre||rec.km<=0||rec.costo<0){msg('Completa componente, km de instalación y costo.');return;}if(ref>0&&rec.km>ref){msg(`El km de instalación (${rec.km}) no puede superar el odómetro actual (${ref}).`);return;}const list=componentRecords();list.push(rec);putList(COMP_KEY,list);clearCompForm();renderComponents();msg('Componente registrado.');}
+function exportList(key,version,name){const payload={version,exportedAt:new Date().toISOString(),records:jsonList(key)};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`b20-${name}-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+async function importList(file,key,renderFn,label){try{const d=JSON.parse(await file.text());const list=Array.isArray(d.records)?d.records:[];if(!list.length)throw new Error('El archivo no contiene registros.');putList(key,list);renderFn();msg(`${label} importadas correctamente.`);}catch(e){msg(`No se pudo importar: ${e.message}`);}}
+
+function render(){renderPlan();renderActive();renderFormIdle();renderMetrics();renderHistory();renderSettings();renderVehicle();renderFuel();renderMaintenance();renderComponents();}
 
 async function startJourney(){
   if(active)return;
@@ -232,5 +263,7 @@ $('start').onclick=startJourney;$('close').onclick=closeActive;$('histMonth').on
 loadSettingsIntoForm();loadVehicleForm();$('histMonth').value=today().slice(0,7);$('fecha').value=today();
 $('saveVehicle').onclick=saveVehicle;$('resetVehicle').onclick=resetVehicle;
 $('fuelLitros').addEventListener('input',calcFuelTotal);$('fuelUnitPrice').addEventListener('input',calcFuelTotal);$('saveFuel').onclick=saveFuel;$('exportFuel').onclick=exportFuel;$('importFuel').onchange=e=>{if(e.target.files[0])importFuelFile(e.target.files[0]);e.target.value='';};$('fuelDate').value=today();
+$('saveMaint').onclick=saveMaint;$('exportMaint').onclick=()=>exportList(MAINT_KEY,'B20-S05-1.0','mantenciones');$('importMaint').onchange=e=>{if(e.target.files[0])importList(e.target.files[0],MAINT_KEY,renderMaintenance,'Mantenciones');e.target.value='';};$('maintDate').value=today();
+$('saveComp').onclick=saveComp;$('exportComp').onclick=()=>exportList(COMP_KEY,'B20-S05-1.0','componentes');$('importComp').onchange=e=>{if(e.target.files[0])importList(e.target.files[0],COMP_KEY,renderComponents,'Componentes');e.target.value='';};$('compDate').value=today();
 for(const id of ['meta','horasPlan','kmInicio'])$(id).addEventListener('input',renderPlan);
 (function boot(){const u=localStorage.getItem('b20s2_url'),k=localStorage.getItem('b20s2_key');if(u&&k){$('url').value=u;$('key').value=k;$('connect').click();}})();
