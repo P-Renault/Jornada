@@ -9,6 +9,63 @@ const today = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.
 const DEFAULTS={efficiencyKmL:13,fuelPrice:1635,maintenancePerKm:0.03,commissionPct:20,netPerHour:8000,tripsPerHour:2,kmPerHour:20};
 let db=null, rows=[], active=null;
 
+
+const VEHICLE_DEFAULTS={marca:'Chevrolet',modelo:'Sail',anio:2015,patente:'',kmReferencia:0,tanqueLitros:0};
+function vehicleSettings(){
+  const out={};
+  for(const k of Object.keys(VEHICLE_DEFAULTS)){
+    const raw=localStorage.getItem(`b20s3_${k}`);
+    if(raw===null){out[k]=VEHICLE_DEFAULTS[k];continue;}
+    out[k]=['anio','kmReferencia','tanqueLitros'].includes(k)?Number(raw):raw;
+  }
+  return out;
+}
+function loadVehicleForm(){
+  const v=vehicleSettings();
+  $('vehMarca').value=v.marca||'';
+  $('vehModelo').value=v.modelo||'';
+  $('vehAnio').value=v.anio||'';
+  $('vehPatente').value=v.patente||'';
+  $('vehKm').value=v.kmReferencia??0;
+  $('vehTank').value=v.tanqueLitros??0;
+}
+function saveVehicle(){
+  const v={marca:val('vehMarca').trim(),modelo:val('vehModelo').trim(),anio:Number(val('vehAnio'))||0,patente:val('vehPatente').trim().toUpperCase(),kmReferencia:Number(val('vehKm'))||0,tanqueLitros:Number(val('vehTank'))||0};
+  if(!v.marca||!v.modelo){$('vehicleStatus').textContent='Marca y modelo son obligatorios.';msg('Completa marca y modelo.');return;}
+  if(v.anio<1950||v.anio>2100){$('vehicleStatus').textContent='Año de vehículo inválido.';msg('Año inválido.');return;}
+  if(v.kmReferencia<0||v.tanqueLitros<0){$('vehicleStatus').textContent='Los valores no pueden ser negativos.';msg('Valores inválidos.');return;}
+  for(const k of Object.keys(v)) localStorage.setItem(`b20s3_${k}`,String(v[k]));
+  localStorage.setItem('b20s3_saved_at',new Date().toISOString());
+  renderVehicle();msg('Ficha de vehículo guardada.');
+}
+function resetVehicle(){
+  for(const k of Object.keys(VEHICLE_DEFAULTS)) localStorage.removeItem(`b20s3_${k}`);
+  loadVehicleForm();renderVehicle();msg('Ficha de vehículo restaurada.');
+}
+function renderVehicle(){
+  if(!$('vehicleSummary')) return;
+  const v=vehicleSettings();
+  const dated=rows.filter(r=>r.km_final!=null && Number.isFinite(Number(r.km_final)));
+  const latest=dated.slice().sort((a,b)=>{
+    const ad=String(a.fecha||''); const bd=String(b.fecha||'');
+    if(ad!==bd) return bd.localeCompare(ad);
+    return String(b.created_at||'').localeCompare(String(a.created_at||''));
+  })[0];
+  const latestKm=latest?Number(latest.km_final):null;
+  $('vehicleSummary').innerHTML=[
+    ['Vehículo',`${v.marca||'—'} ${v.modelo||''}`.trim()],
+    ['Año',v.anio||'—'],
+    ['Patente',v.patente||'No registrada'],
+    ['Km referencia',`${Number(v.kmReferencia||0).toFixed(1)} km`],
+    ['Último km registrado',latestKm!=null?`${latestKm.toFixed(1)} km`:'Sin registro'],
+    ['Tanque',v.tanqueLitros?`${Number(v.tanqueLitros).toFixed(1)} L`:'No definido']
+  ].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join('');
+  const delta=latestKm!=null?latestKm-Number(v.kmReferencia||0):0;
+  $('vehicleRef').textContent=latestKm!=null?`Última referencia encontrada en jornadas: ${latestKm.toFixed(1)} km. Diferencia respecto del odómetro de referencia: ${delta.toFixed(1)} km.`:'Aún no existe una jornada con kilometraje final registrado.';
+  const ts=localStorage.getItem('b20s3_saved_at');
+  $('vehicleStatus').textContent=ts?`Último guardado: ${new Date(ts).toLocaleString('es-CL')}`:'Ficha base local; aún no guardada.';
+}
+
 function settings(){
   const s={};
   let needsMigration=false;
@@ -91,7 +148,7 @@ function renderActive(){
 function renderFormIdle(){if(active)return;['fecha','meta','horasPlan','horaInicio','kmInicio'].forEach(id=>$(id).disabled=false);$('fecha').value=today();$('closeBox').hidden=true;$('start').disabled=false;}
 function renderMetrics(){const m=metrics(rows);const items=[['Observaciones cerradas',m.n],['Neto acumulado',money(m.totalNet)],['Neto/hora',money(m.avgNetHour)],['Neto/km',money(m.avgNetKm)],['Neto/viaje',money(m.avgNetTrip)],['Km/viaje',m.avgKmTrip.toFixed(2)],['Combustible/km',money(m.avgFuelKm)],['Desviación media',money(m.avgDeviation)],['Desviación relativa',`${m.avgDeviationPct.toFixed(2)}%`]];$('metrics').innerHTML=items.map(([a,b])=>`<div class="metric"><span>${a}</span><strong>${b}</strong></div>`).join('');}
 function renderHistory(){const month=$('histMonth').value||today().slice(0,7);const list=rows.filter(r=>String(r.fecha).slice(0,7)===month);if(!list.length){$('history').innerHTML='<div class="empty">Sin jornadas en el período.</div>';return;} $('history').innerHTML=list.map(r=>{const km=Math.max(0,Number(r.km_final||0)-Number(r.km_inicio||0));const h=Number(r.horas_trabajadas)>0?Number(r.horas_trabajadas):hoursBetween(r.hora_inicio,r.hora_fin);return `<article class="item"><div class="row"><b>${String(r.fecha).slice(0,10)}</b><span class="pill ${isClosed(r)?'closed-pill':'active-pill'}">${isClosed(r)?'Cerrada':'En curso'}</span></div><div class="mini-grid"><span>Neto <b>${money(r.ganancia_neta)}</b></span><span>Meta <b>${money(r.meta_dia)}</b></span><span>Km <b>${km.toFixed(1)}</b></span><span>Horas <b>${h.toFixed(2)}</b></span></div><div class="muted">Plan neto: ${money(r.plan_ganancia_neta)} · Desviación: ${money((Number(r.ganancia_neta)||0)-(Number(r.meta_dia)||0))}</div></article>`;}).join('');}
-function render(){renderPlan();renderActive();renderFormIdle();renderMetrics();renderHistory();renderSettings();}
+function render(){renderPlan();renderActive();renderFormIdle();renderMetrics();renderHistory();renderSettings();renderVehicle();}
 
 async function startJourney(){
   if(active)return;
@@ -130,6 +187,7 @@ async function closeActive(){
 }
 $('connect').onclick=async()=>{try{const u=val('url').trim(),k=val('key').trim();if(!/^https:\/\/[^\s]+\.supabase\.co$/.test(u)||!k)throw new Error('URL o Publishable Key inválida.');db=window.supabase.createClient(u,k);const t=await withTimeout(db.from('jornadas_trabajo').select('id').limit(1));if(t.error)throw t.error;localStorage.setItem('b20s2_url',u);localStorage.setItem('b20s2_key',k);$('config').hidden=true;$('app').hidden=false;await load();}catch(e){$('msg').textContent=`No se pudo conectar: ${e.message}`;}};
 $('start').onclick=startJourney;$('close').onclick=closeActive;$('histMonth').onchange=renderHistory;$('saveSettings').onclick=saveSettings;$('resetSettings').onclick=resetSettings;$('exportSettings').onclick=exportSettings;$('importSettings').onchange=e=>{if(e.target.files[0])importSettingsFile(e.target.files[0]);e.target.value='';};
-loadSettingsIntoForm();$('histMonth').value=today().slice(0,7);$('fecha').value=today();
+loadSettingsIntoForm();loadVehicleForm();$('histMonth').value=today().slice(0,7);$('fecha').value=today();
+$('saveVehicle').onclick=saveVehicle;$('resetVehicle').onclick=resetVehicle;
 for(const id of ['meta','horasPlan','kmInicio'])$(id).addEventListener('input',renderPlan);
 (function boot(){const u=localStorage.getItem('b20s2_url'),k=localStorage.getItem('b20s2_key');if(u&&k){$('url').value=u;$('key').value=k;$('connect').click();}})();
