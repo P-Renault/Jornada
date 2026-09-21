@@ -1,8 +1,8 @@
-# B20 S06 v1.0
-- Nuevo módulo Documentación.
-- Control de revisión técnica, permiso, SOAP, seguros y otros.
-- Alertas por vencimiento.
-- Costo documental acumulado.
-- Persistencia local para validación.
-- Exportación/importación JSON.
-- Mantiene S01-S05 y no realiza migraciones destructivas.
+# B20 S07 v1.1
+
+- S07 servicios: alta, persistencia local, historial, eliminación, exportación e importación.
+- Kilometraje de servicio opcional y precargado con el odómetro real cuando existe.
+- Validación de costo, kilometraje y próxima fecha.
+- S05 integrado con km opcional y precarga del odómetro.
+- S06 integrado con registro documental validado.
+- Encabezado y pie dinámicos por módulo S01-S07.
