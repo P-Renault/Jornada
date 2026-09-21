@@ -178,9 +178,9 @@ function renderFuel(){
   document.querySelectorAll('.fuel-delete').forEach(btn=>btn.onclick=()=>{saveFuelRecords(fuelRecords().filter(r=>r.id!==btn.dataset.id));renderFuel();msg('Carga eliminada del registro S04.');});
 }
 function clearFuelForm(){['fuelDate','fuelKm','fuelLitros','fuelPrice','fuelTotal','fuelNote'].forEach(id=>$(id).value='');$('fuelFull').checked=false;}
-function calcFuelTotal(){const l=Number(val('fuelLitros'))||0,p=Number(val('fuelPrice'))||0;$('fuelTotal').value=l&&p?(l*p).toFixed(0):'';}
+function calcFuelTotal(){const l=Number(val('fuelLitros'))||0,p=Number(val('fuelUnitPrice'))||0;$('fuelTotal').value=l&&p?(l*p).toFixed(0):'';}
 function saveFuel(){
-  const fecha=val('fuelDate')||today(), km=Number(val('fuelKm'))||0, litros=Number(val('fuelLitros'))||0, precio=Number(val('fuelPrice'))||0;
+  const fecha=val('fuelDate')||today(), km=Number(val('fuelKm'))||0, litros=Number(val('fuelLitros'))||0, precio=Number(val('fuelUnitPrice'))||0;
   const total=Number(val('fuelTotal'))||litros*precio;
   const ref=vehicleOdometer();
   if(!fecha||km<=0||litros<=0||precio<=0||total<=0){msg('Completa fecha, odómetro, litros y precio con valores mayores que cero.');return;}
@@ -188,7 +188,7 @@ function saveFuel(){
   const rec={id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,fecha,km,litros,precio,total,lleno:$('fuelFull').checked,nota:val('fuelNote').trim()||null};
   const list=fuelRecords();list.push(rec);saveFuelRecords(list);clearFuelForm();renderFuel();msg('Carga de combustible registrada.');
 }
-function exportFuel(){const payload={version:'B20-S04-1.0',exportedAt:new Date().toISOString(),records:fuelRecords()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`b20-combustible-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+function exportFuel(){const payload={version:'B20-S04-1.1',exportedAt:new Date().toISOString(),records:fuelRecords()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`b20-combustible-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 async function importFuelFile(file){try{const d=JSON.parse(await file.text());const list=Array.isArray(d.records)?d.records:[];if(!list.length)throw new Error('El archivo no contiene cargas.');for(const r of list){if(!(Number(r.km)>0&&Number(r.litros)>0&&Number(r.precio)>0))throw new Error('El archivo contiene una carga inválida.');}saveFuelRecords(list);renderFuel();msg('Historial de combustible importado.');}catch(e){msg(`No se pudo importar combustible: ${e.message}`);}}
 function render(){renderPlan();renderActive();renderFormIdle();renderMetrics();renderHistory();renderSettings();renderVehicle();renderFuel();}
 
@@ -231,6 +231,6 @@ $('connect').onclick=async()=>{try{const u=val('url').trim(),k=val('key').trim()
 $('start').onclick=startJourney;$('close').onclick=closeActive;$('histMonth').onchange=renderHistory;$('saveSettings').onclick=saveSettings;$('resetSettings').onclick=resetSettings;$('exportSettings').onclick=exportSettings;$('importSettings').onchange=e=>{if(e.target.files[0])importSettingsFile(e.target.files[0]);e.target.value='';};
 loadSettingsIntoForm();loadVehicleForm();$('histMonth').value=today().slice(0,7);$('fecha').value=today();
 $('saveVehicle').onclick=saveVehicle;$('resetVehicle').onclick=resetVehicle;
-$('fuelLitros').addEventListener('input',calcFuelTotal);$('fuelPrice').addEventListener('input',calcFuelTotal);$('saveFuel').onclick=saveFuel;$('exportFuel').onclick=exportFuel;$('importFuel').onchange=e=>{if(e.target.files[0])importFuelFile(e.target.files[0]);e.target.value='';};$('fuelDate').value=today();
+$('fuelLitros').addEventListener('input',calcFuelTotal);$('fuelUnitPrice').addEventListener('input',calcFuelTotal);$('saveFuel').onclick=saveFuel;$('exportFuel').onclick=exportFuel;$('importFuel').onchange=e=>{if(e.target.files[0])importFuelFile(e.target.files[0]);e.target.value='';};$('fuelDate').value=today();
 for(const id of ['meta','horasPlan','kmInicio'])$(id).addEventListener('input',renderPlan);
 (function boot(){const u=localStorage.getItem('b20s2_url'),k=localStorage.getItem('b20s2_key');if(u&&k){$('url').value=u;$('key').value=k;$('connect').click();}})();

@@ -1,8 +1,8 @@
 # Changelog
 
-## S04 v1.0
-- Added fuel/cost module with local persistence.
-- Added absolute odometer validation against S03 reference.
-- Added observed fuel cost, km/L and cost/km summaries.
-- Added JSON export/import.
+## S04 v1.1
+- Corrected header/capa metadata from S03 to S04.
+- Removed duplicate DOM id collision between S02 fuel-price setting and S04 fuel unit price.
+- S04 now uses fuelUnitPrice for load price.
+- Updated cache-busting to b20-s04-1.1.
 - No SQL or Supabase schema changes.
