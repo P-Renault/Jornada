@@ -264,7 +264,36 @@ function saveService(){const rawKm=val('svcKm');const d=val('svcDate')||today(),
 function exportServices(){const payload={version:'B20-S07-1.0',exportedAt:new Date().toISOString(),records:serviceRecords()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`b20-servicios-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 async function importServices(file){try{const d=JSON.parse(await file.text());const list=Array.isArray(d.records)?d.records:[];if(!list.length)throw new Error('El archivo no contiene servicios.');for(const r of list){if(!r.fecha||!r.tipo||Number(r.costo)<0)throw new Error('El archivo contiene un servicio inválido.');}putList(SERVICE_KEY,list);renderServices();msg('Historial de servicios importado.');}catch(e){msg(`No se pudo importar servicios: ${e.message}`);}}
 
-function render(){renderPlan();renderActive();renderFormIdle();renderMetrics();renderHistory();renderSettings();renderVehicle();renderFuel();renderMaintenance();renderComponents();renderDocs();renderServices();}
+
+// ===== S08: Gastos operacionales (persistencia local durante validación) =====
+const EXP_KEY='b20s8_operating_expenses';
+function expenseRecords(){return jsonList(EXP_KEY);}
+function expenseCategoryLabel(t){return ({peajes:'Peajes',estacionamiento:'Estacionamiento',datos_movil:'Datos / móvil',alimentacion:'Alimentación de jornada',higiene:'Higiene',herramientas:'Herramientas',administrativo:'Administrativo',otro:'Otro'})[t]||t;}
+function expenseNatureLabel(t){return ({gasto_efectivo:'Gasto efectivo',costo_economico:'Costo económico',provision_futura:'Provisión futura'})[t]||t;}
+function renderExpenses(){
+ const list=expenseRecords().sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha))||String(b.id).localeCompare(String(a.id)));
+ const cash=list.filter(r=>r.naturaleza==='gasto_efectivo').reduce((s,r)=>s+Number(r.monto||0),0);
+ const econ=list.filter(r=>r.naturaleza==='costo_economico').reduce((s,r)=>s+Number(r.monto||0),0);
+ const prov=list.filter(r=>r.naturaleza==='provision_futura').reduce((s,r)=>s+Number(r.monto||0),0);
+ const total=list.reduce((s,r)=>s+Number(r.monto||0),0);
+ $('expSummary').innerHTML=[['Registros',list.length],['Gasto efectivo',money(cash)],['Costo económico',money(econ)],['Provisión futura',money(prov)],['Total registrado',money(total)]].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join('');
+ $('expHistory').innerHTML=list.length?list.map(r=>`<article class="item"><div class="row"><b>${String(r.fecha).slice(0,10)} · ${expenseCategoryLabel(r.categoria)}</b><button class="danger exp-delete" data-id="${r.id}">Eliminar</button></div><div class="mini-grid"><span>Naturaleza <b>${expenseNatureLabel(r.naturaleza)}</b></span><span>Monto <b>${money(r.monto)}</b></span><span>Km <b>${r.km!==null&&r.km!==undefined?Number(r.km).toLocaleString('es-CL'):'—'}</b></span><span>Jornada <b>${r.jornada||'—'}</b></span></div><div><b>${r.concepto||'Sin concepto'}</b></div><div class="muted">${r.nota||'Sin observaciones'}</div></article>`).join(''):'<div class="empty">Sin gastos registrados.</div>';
+ document.querySelectorAll('.exp-delete').forEach(b=>b.onclick=()=>{if(confirm('¿Eliminar este gasto del registro local?')){putList(EXP_KEY,expenseRecords().filter(x=>x.id!==b.dataset.id));renderExpenses();msg('Gasto eliminado.');}});
+}
+function clearExpenseForm(){['expDate','expAmount','expKm','expJourney','expConcept','expNote'].forEach(id=>$(id).value='');$('expDate').value=today();$('expCategory').value='peajes';$('expNature').value='gasto_efectivo';}
+function saveExpense(){
+ const fecha=val('expDate')||today(), monto=Number(val('expAmount')||0), rawKm=val('expKm'), km=rawKm===''?null:Number(rawKm), categoria=val('expCategory'), naturaleza=val('expNature'), concepto=val('expConcept').trim();
+ const ref=vehicleOdometer();
+ if(!fecha||!categoria||!naturaleza||!concepto||!Number.isFinite(monto)||monto<0){msg('Completa fecha, categoría, naturaleza, concepto y monto válido.');return;}
+ if(km!==null&&(!Number.isFinite(km)||km<0)){msg('El kilometraje debe ser válido.');return;}
+ if(ref>0&&km!==null&&km>ref){msg(`El km asociado (${km}) no puede superar el odómetro actual (${ref}).`);return;}
+ const rec={id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,fecha,categoria,naturaleza,monto,km,jornada:val('expJourney').trim()||null,concepto,nota:val('expNote').trim()||null};
+ const list=expenseRecords();list.push(rec);putList(EXP_KEY,list);clearExpenseForm();renderExpenses();msg('Gasto registrado correctamente.');
+}
+function exportExpenses(){const payload={version:'B20-S08-1.0',exportedAt:new Date().toISOString(),records:expenseRecords()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`b20-gastos-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+async function importExpenses(file){try{const d=JSON.parse(await file.text());const list=Array.isArray(d.records)?d.records:[];for(const r of list){if(!r.fecha||!r.categoria||!r.naturaleza||!r.concepto||Number(r.monto)<0)throw new Error('El archivo contiene un gasto inválido.');}putList(EXP_KEY,list);renderExpenses();msg('Historial de gastos importado.');}catch(e){msg(`No se pudo importar gastos: ${e.message}`);}}
+
+function render(){renderPlan();renderActive();renderFormIdle();renderMetrics();renderHistory();renderSettings();renderVehicle();renderFuel();renderMaintenance();renderComponents();renderDocs();renderServices();renderExpenses();}
 
 async function startJourney(){
   if(active)return;
@@ -309,7 +338,8 @@ $('fuelLitros').addEventListener('input',calcFuelTotal);$('fuelUnitPrice').addEv
 $('saveMaint').onclick=saveMaint;$('exportMaint').onclick=()=>exportList(MAINT_KEY,'B20-S05-1.1','mantenciones');$('importMaint').onchange=e=>{if(e.target.files[0])importList(e.target.files[0],MAINT_KEY,renderMaintenance,'Mantenciones');e.target.value='';};$('maintDate').value=today();
 
 $('saveDoc').onclick=saveDoc;$('exportDocs').onclick=exportDocs;$('importDocs').onchange=e=>{if(e.target.files[0])importDocs(e.target.files[0]);e.target.value='';};
-$('saveSvc').onclick=saveService;$('exportSvc').onclick=exportServices;$('importSvc').onchange=e=>{if(e.target.files[0])importServices(e.target.files[0]);e.target.value='';};clearServiceForm();
+$('saveSvc').onclick=saveService;
+$('saveExp').onclick=saveExpense;$('exportExp').onclick=exportExpenses;$('importExp').onchange=e=>{if(e.target.files[0])importExpenses(e.target.files[0]);e.target.value='';};clearExpenseForm();$('exportSvc').onclick=exportServices;$('importSvc').onchange=e=>{if(e.target.files[0])importServices(e.target.files[0]);e.target.value='';};clearServiceForm();
 $('docIssue').value=today();
 $('saveComp').onclick=saveComp;$('exportComp').onclick=()=>exportList(COMP_KEY,'B20-S05-1.1','componentes');$('importComp').onchange=e=>{if(e.target.files[0])importList(e.target.files[0],COMP_KEY,renderComponents,'Componentes');e.target.value='';};$('compDate').value=today();
 for(const id of ['meta','horasPlan','kmInicio'])$(id).addEventListener('input',renderPlan);

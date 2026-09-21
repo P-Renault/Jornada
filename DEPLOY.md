@@ -1,5 +1,12 @@
-# B20 S07 v1.1
+# Despliegue B20 S08 v1.0
 
-Reemplazar completamente el despliegue actual con el contenido del paquete. No requiere SQL. Mantiene Supabase para jornadas_trabajo y almacenamiento local para S02-S07 durante validación.
+1. Reemplazar completamente el contenido del despliegue anterior con el contenido de este paquete.
+2. Abrir la aplicación y conectar con la misma instancia Supabase utilizada por B20.
+3. Verificar que S01–S07 continúen visibles y operativos.
+4. Abrir **Gastos**.
+5. Registrar un gasto real, por ejemplo un peaje, estacionamiento o dato móvil.
+6. Probar las tres naturalezas en registros separados: gasto efectivo, costo económico y provisión futura.
+7. Recargar y verificar persistencia local.
+8. Probar exportación/importación y eliminación.
 
-Probar S07: registrar, recargar, exportar, importar y eliminar un servicio.
+No ejecutar SQL para S08 v1.0.
