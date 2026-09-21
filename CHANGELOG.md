@@ -1,9 +1,10 @@
-# Changelog — B20 S08
+# CHANGELOG · B20 S09
 
-## v1.0 — 2026-09-20
-- Nuevo módulo Gastos operacionales.
-- Separación gasto efectivo / costo económico / provisión futura.
-- Historial y resumen por naturaleza.
-- Importación/exportación JSON.
-- Validación de kilometraje con odómetro real.
-- Integración con navegación B20 S01–S07.
+## v1.0
+- Nuevo módulo Fondo de desgaste.
+- Registro de aportes y retiros.
+- Control de saldo y cobertura.
+- Registro de necesidades futuras.
+- Déficit y aportes requeridos por km/jornada.
+- Exportación/importación JSON.
+- Sin SQL; persistencia local durante validación.
