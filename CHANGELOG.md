@@ -1,10 +1,6 @@
-# CHANGELOG · B20 S09
+# B20 S10
 
-## v1.0
-- Nuevo módulo Fondo de desgaste.
-- Registro de aportes y retiros.
-- Control de saldo y cobertura.
-- Registro de necesidades futuras.
-- Déficit y aportes requeridos por km/jornada.
-- Exportación/importación JSON.
-- Sin SQL; persistencia local durante validación.
+- Added Crédito personal al trabajo.
+- Added recovery tracking and outstanding balance.
+- Preserved previous S01-S09 modules.
+- No SQL required for validation.

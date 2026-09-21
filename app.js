@@ -1,5 +1,5 @@
 'use strict';
-const B20_S07_VERSION='B20-S07-1.1';
+const B20_S07_VERSION='B20-S10-1.0';
 import { planNetGoal, closeJourney, metrics, hoursBetween, round } from './b20-core.js';
 
 const $ = id => document.getElementById(id);
@@ -323,7 +323,55 @@ function saveNeed(){const nombre=val('needName').trim(),costo=Number(val('needAm
 function exportFund(){const payload={version:'B20-S09-1.0',exportedAt:new Date().toISOString(),movements:fundRecords(),needs:needRecords()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`b20-fondo-desgaste-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 async function importFund(file){try{const d=JSON.parse(await file.text());if(!Array.isArray(d.movements)||!Array.isArray(d.needs))throw new Error('Formato de fondo inválido.');putList(FUND_KEY,d.movements);putList(NEED_KEY,d.needs);renderFund();msg('Fondo y necesidades importados correctamente.');}catch(e){msg(`No se pudo importar el fondo: ${e.message}`);}}
 
-function render(){renderPlan();renderActive();renderFormIdle();renderMetrics();renderHistory();renderSettings();renderVehicle();renderFuel();renderMaintenance();renderComponents();renderDocs();renderServices();renderExpenses();renderFund();}
+const CREDIT_KEY='b20s10_credit_movements';
+function creditRecords(){return jsonList(CREDIT_KEY);}
+function creditMovementsByRef(ref){return creditRecords().filter(r=>r.creditRef===ref);}
+function creditBalance(ref){return creditMovementsByRef(ref).reduce((s,r)=>s+(r.tipo==='credito'?Number(r.monto||0):-Number(r.monto||0)),0);}
+function creditBalances(){
+  const map=new Map();
+  for(const r of creditRecords()){
+    const ref=r.creditRef||r.id;
+    if(!map.has(ref))map.set(ref,{id:ref,fecha:r.fecha,concepto:r.concepto||'Crédito personal',original:0,recuperado:0});
+    const c=map.get(ref);
+    if(r.tipo==='credito'){c.original+=Number(r.monto||0);if(!c.fecha)c.fecha=r.fecha;}
+    else c.recuperado+=Number(r.monto||0);
+    if(r.concepto)c.concepto=r.concepto;
+  }
+  return [...map.values()].map(c=>({...c,saldo:Math.max(0,c.original-c.recuperado)}));
+}
+function refreshCreditRefs(){
+  const sel=$('creditRef'); if(!sel)return;
+  const current=sel.value;
+  const active=creditBalances().filter(c=>c.saldo>0);
+  sel.innerHTML='<option value="">— Seleccionar para recuperación —</option>'+active.map(c=>`<option value="${c.id}">${c.concepto} · saldo ${money(c.saldo)} · ${c.id.slice(-8)}</option>`).join('');
+  if(active.some(c=>c.id===current))sel.value=current;
+}
+function renderCredits(){
+  if(!$('creditSummary'))return;
+  const records=creditRecords();
+  const credits=creditBalances();
+  const original=credits.reduce((s,c)=>s+c.original,0);
+  const recovered=credits.reduce((s,c)=>s+c.recuperado,0);
+  const balance=credits.reduce((s,c)=>s+c.saldo,0);
+  $('creditSummary').innerHTML=[['Créditos registrados',credits.length],['Capital aportado',money(original)],['Capital recuperado',money(recovered)],['Saldo por recuperar',money(balance)]].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join('');
+  $('creditHistory').innerHTML=credits.length?credits.map(c=>`<article class="item"><div class="row"><b>${c.concepto}</b><span>${c.saldo>0?'Activo':'Recuperado'}</span></div><div class="mini-grid"><span>Original <b>${money(c.original)}</b></span><span>Recuperado <b>${money(c.recuperado)}</b></span><span>Saldo <b>${money(c.saldo)}</b></span><span>Ref. <b>${c.id.slice(-8)}</b></span></div><div class="row"><span class="muted">Inicio ${c.fecha||'—'}</span>${c.saldo>0?`<button class="secondary credit-recover" data-id="${c.id}">Preparar recuperación</button>`:''}</div></article>`).join(''):'<div class="empty">Sin créditos personales registrados.</div>';
+  refreshCreditRefs();
+  document.querySelectorAll('.credit-recover').forEach(b=>b.onclick=()=>{$('creditType').value='recuperacion';refreshCreditRefs();$('creditRef').value=b.dataset.id;window.scrollTo({top:0,behavior:'smooth'});msg('Crédito seleccionado para registrar recuperación.');});
+}
+function clearCreditForm(){['creditAmount','creditKm','creditConcept','creditNote'].forEach(id=>$(id).value='');$('creditDate').value=today();$('creditType').value='credito';refreshCreditRefs();$('creditRef').value='';}
+function saveCredit(){
+  const fecha=val('creditDate')||today(),tipo=val('creditType'),monto=Number(val('creditAmount')||0),refKm=val('creditKm'),km=refKm===''?null:Number(refKm),concepto=val('creditConcept').trim(),note=val('creditNote').trim()||null;
+  if(!fecha||!['credito','recuperacion'].includes(tipo)||!Number.isFinite(monto)||monto<=0||!concepto){msg('Completa fecha, movimiento, monto y motivo/concepto.');return;}
+  const od=vehicleOdometer(); if(km!==null&&(!Number.isFinite(km)||km<0)){msg('El kilometraje debe ser válido.');return;} if(od>0&&km!==null&&km>od){msg(`El km asociado (${km}) no puede superar el odómetro actual (${od}).`);return;}
+  let creditRef;
+  if(tipo==='credito') creditRef=`${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+  else {creditRef=val('creditRef'); if(!creditRef){msg('Selecciona el crédito que estás recuperando.');return;} const saldo=creditBalance(creditRef); if(monto>saldo){msg(`La recuperación (${money(monto)}) supera el saldo pendiente (${money(saldo)}).`);return;}}
+  const rec={id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,fecha,tipo,monto,creditRef,km,concepto,nota:note}; const list=creditRecords();list.push(rec);putList(CREDIT_KEY,list);clearCreditForm();renderCredits();msg(tipo==='credito'?'Crédito personal registrado.':'Recuperación registrada.');
+}
+function exportCredits(){const payload={version:'B20-S10-1.0',exportedAt:new Date().toISOString(),records:creditRecords()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`b20-creditos-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+async function importCredits(file){try{const d=JSON.parse(await file.text());if(!Array.isArray(d.records))throw new Error('Formato de créditos inválido.');for(const r of d.records){if(!r.fecha||!['credito','recuperacion'].includes(r.tipo)||!Number(r.monto)||!r.creditRef||!r.concepto)throw new Error('El archivo contiene un movimiento inválido.');}putList(CREDIT_KEY,d.records);renderCredits();msg('Créditos importados correctamente.');}catch(e){msg(`No se pudo importar créditos: ${e.message}`);}}
+
+function render(){renderPlan();renderActive();renderFormIdle();renderMetrics();renderHistory();renderSettings();renderVehicle();renderFuel();renderMaintenance();renderComponents();renderDocs();renderServices();renderExpenses();renderFund();renderCredits();}
 
 async function startJourney(){
   if(active)return;
@@ -370,7 +418,7 @@ $('saveMaint').onclick=saveMaint;$('exportMaint').onclick=()=>exportList(MAINT_K
 $('saveDoc').onclick=saveDoc;$('exportDocs').onclick=exportDocs;$('importDocs').onchange=e=>{if(e.target.files[0])importDocs(e.target.files[0]);e.target.value='';};
 $('saveSvc').onclick=saveService;
 $('saveExp').onclick=saveExpense;$('exportExp').onclick=exportExpenses;$('importExp').onchange=e=>{if(e.target.files[0])importExpenses(e.target.files[0]);e.target.value='';};clearExpenseForm();
-$('saveFund').onclick=saveFund;$('exportFund').onclick=exportFund;$('importFund').onchange=e=>{if(e.target.files[0])importFund(e.target.files[0]);e.target.value='';};$('saveNeed').onclick=saveNeed;$('exportNeeds').onclick=exportFund;$('importNeeds').onchange=e=>{if(e.target.files[0])importFund(e.target.files[0]);e.target.value='';};clearFundForm();clearNeedForm();$('exportSvc').onclick=exportServices;$('importSvc').onchange=e=>{if(e.target.files[0])importServices(e.target.files[0]);e.target.value='';};clearServiceForm();
+$('saveCredit').onclick=saveCredit;$('exportCredits').onclick=exportCredits;$('importCredits').onchange=e=>{if(e.target.files[0])importCredits(e.target.files[0]);e.target.value='';};clearCreditForm();$('saveFund').onclick=saveFund;$('exportFund').onclick=exportFund;$('importFund').onchange=e=>{if(e.target.files[0])importFund(e.target.files[0]);e.target.value='';};$('saveNeed').onclick=saveNeed;$('exportNeeds').onclick=exportFund;$('importNeeds').onchange=e=>{if(e.target.files[0])importFund(e.target.files[0]);e.target.value='';};clearFundForm();clearNeedForm();$('exportSvc').onclick=exportServices;$('importSvc').onchange=e=>{if(e.target.files[0])importServices(e.target.files[0]);e.target.value='';};clearServiceForm();
 $('docIssue').value=today();
 $('saveComp').onclick=saveComp;$('exportComp').onclick=()=>exportList(COMP_KEY,'B20-S05-1.1','componentes');$('importComp').onchange=e=>{if(e.target.files[0])importList(e.target.files[0],COMP_KEY,renderComponents,'Componentes');e.target.value='';};$('compDate').value=today();
 for(const id of ['meta','horasPlan','kmInicio'])$(id).addEventListener('input',renderPlan);

@@ -1,1 +1,1 @@
-{"name":"control-trabajo-b20-s09","private":true,"type":"module","scripts":{"test":"node tests/s09_smoke.mjs"}}
+{"name":"control-trabajo-b20-s10","private":true,"type":"module","scripts":{"test":"node tests/s10_smoke.mjs"}}
