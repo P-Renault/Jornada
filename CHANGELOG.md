@@ -1,7 +1,7 @@
-# B20 S03 v1.1
+# B20 S03
 
-- Corregida la estructura HTML: Vehículo ya no queda anidado dentro de Configuración.
-- Añadida implementación real del módulo Vehículo/Kilometraje al app.js que GitHub Pages ejecuta.
-- Persistencia local de ficha del vehículo.
-- Lectura del último km_final disponible desde jornadas_trabajo.
-- Sin cambios de esquema ni SQL.
+## v1.3
+- Distingue odómetro absoluto actual de kilometraje de jornadas históricas/pruebas.
+- No calcula diferencias falsas entre 187.760 km y registros relativos como 80 km.
+- Nuevas jornadas toman como Km inicio el odómetro actual guardado cuando existe.
+- No modifica Supabase ni registros históricos.

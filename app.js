@@ -52,16 +52,26 @@ function renderVehicle(){
     return String(b.created_at||'').localeCompare(String(a.created_at||''));
   })[0];
   const latestKm=latest?Number(latest.km_final):null;
+  const refKm=Number(v.kmReferencia||0);
+  const validOdometerScale=latestKm!=null && (refKm<=0 || latestKm>=refKm);
+  const closedRows=rows.filter(r=>isClosed(r) && Number.isFinite(Number(r.km_inicio)) && Number.isFinite(Number(r.km_final)));
+  const accumulatedKm=closedRows.reduce((sum,r)=>sum+Math.max(0,Number(r.km_final)-Number(r.km_inicio)),0);
   $('vehicleSummary').innerHTML=[
     ['Vehículo',`${v.marca||'—'} ${v.modelo||''}`.trim()],
     ['Año',v.anio||'—'],
     ['Patente',v.patente||'No registrada'],
-    ['Km referencia',`${Number(v.kmReferencia||0).toFixed(1)} km`],
-    ['Último km registrado',latestKm!=null?`${latestKm.toFixed(1)} km`:'Sin registro'],
+    ['Odómetro actual de referencia',`${refKm.toFixed(1)} km`],
+    ['Último valor km de jornada registrado',latestKm!=null?`${latestKm.toFixed(1)} km`:'Sin registro'],
+    ['Km acumulados en registros B20',`${accumulatedKm.toFixed(1)} km`],
     ['Tanque',v.tanqueLitros?`${Number(v.tanqueLitros).toFixed(1)} L`:'No definido']
   ].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join('');
-  const delta=latestKm!=null?latestKm-Number(v.kmReferencia||0):0;
-  $('vehicleRef').textContent=latestKm!=null?`Última referencia encontrada en jornadas: ${latestKm.toFixed(1)} km. Diferencia respecto del odómetro de referencia: ${delta.toFixed(1)} km.`:'Aún no existe una jornada con kilometraje final registrado.';
+  if(refKm>0){
+    $('vehicleRef').innerHTML=`<b>Referencia correcta:</b> el ${refKm.toFixed(1)} km corresponde al odómetro real actual del vehículo. Los ${latestKm!=null?latestKm.toFixed(1):'—'} km encontrados en registros de jornada representan kilometraje de la actividad histórica/pruebas y <b>no deben restarse del odómetro</b>. Las nuevas jornadas deben iniciar con el odómetro real del vehículo.`;
+  } else if(latestKm==null){
+    $('vehicleRef').textContent='Registra el odómetro real actual del vehículo para establecer la referencia operativa.';
+  } else {
+    $('vehicleRef').textContent=`Se encontraron ${latestKm.toFixed(1)} km como último valor de jornada. Este valor se mantiene como dato histórico y no se interpreta como odómetro absoluto.`;
+  }
   const ts=localStorage.getItem('b20s3_saved_at');
   $('vehicleStatus').textContent=ts?`Último guardado: ${new Date(ts).toLocaleString('es-CL')}`:'Ficha base local; aún no guardada.';
 }
@@ -145,7 +155,7 @@ function renderActive(){
   $('start').disabled=true; $('closeBox').hidden=false;
   if(!$('horaFin').value){ const d=new Date(); $('horaFin').value=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
 }
-function renderFormIdle(){if(active)return;['fecha','meta','horasPlan','horaInicio','kmInicio'].forEach(id=>$(id).disabled=false);$('fecha').value=today();$('closeBox').hidden=true;$('start').disabled=false;}
+function renderFormIdle(){if(active)return;['fecha','meta','horasPlan','horaInicio','kmInicio'].forEach(id=>$(id).disabled=false);$('fecha').value=today();const v=vehicleSettings();if(Number(v.kmReferencia)>0 && (!val('kmInicio') || Number(val('kmInicio'))<1000)) $('kmInicio').value=Number(v.kmReferencia);$('closeBox').hidden=true;$('start').disabled=false;}
 function renderMetrics(){const m=metrics(rows);const items=[['Observaciones cerradas',m.n],['Neto acumulado',money(m.totalNet)],['Neto/hora',money(m.avgNetHour)],['Neto/km',money(m.avgNetKm)],['Neto/viaje',money(m.avgNetTrip)],['Km/viaje',m.avgKmTrip.toFixed(2)],['Combustible/km',money(m.avgFuelKm)],['Desviación media',money(m.avgDeviation)],['Desviación relativa',`${m.avgDeviationPct.toFixed(2)}%`]];$('metrics').innerHTML=items.map(([a,b])=>`<div class="metric"><span>${a}</span><strong>${b}</strong></div>`).join('');}
 function renderHistory(){const month=$('histMonth').value||today().slice(0,7);const list=rows.filter(r=>String(r.fecha).slice(0,7)===month);if(!list.length){$('history').innerHTML='<div class="empty">Sin jornadas en el período.</div>';return;} $('history').innerHTML=list.map(r=>{const km=Math.max(0,Number(r.km_final||0)-Number(r.km_inicio||0));const h=Number(r.horas_trabajadas)>0?Number(r.horas_trabajadas):hoursBetween(r.hora_inicio,r.hora_fin);return `<article class="item"><div class="row"><b>${String(r.fecha).slice(0,10)}</b><span class="pill ${isClosed(r)?'closed-pill':'active-pill'}">${isClosed(r)?'Cerrada':'En curso'}</span></div><div class="mini-grid"><span>Neto <b>${money(r.ganancia_neta)}</b></span><span>Meta <b>${money(r.meta_dia)}</b></span><span>Km <b>${km.toFixed(1)}</b></span><span>Horas <b>${h.toFixed(2)}</b></span></div><div class="muted">Plan neto: ${money(r.plan_ganancia_neta)} · Desviación: ${money((Number(r.ganancia_neta)||0)-(Number(r.meta_dia)||0))}</div></article>`;}).join('');}
 function render(){renderPlan();renderActive();renderFormIdle();renderMetrics();renderHistory();renderSettings();renderVehicle();}
