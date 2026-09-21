@@ -11,22 +11,27 @@ let db=null, rows=[], active=null;
 
 function settings(){
   const s={};
-  let invalidCore=false;
+  let needsMigration=false;
   for(const k of Object.keys(DEFAULTS)){
     const raw=localStorage.getItem(`b20s2_${k}`);
     const n=raw===null||raw===''?DEFAULTS[k]:Number(raw);
     s[k]=Number.isFinite(n)?n:DEFAULTS[k];
-    if(['efficiencyKmL','fuelPrice','netPerHour','tripsPerHour','kmPerHour'].includes(k) && s[k]<=0) invalidCore=true;
+    // Legacy S02 stored zero values. Treat zero as an uninitialized parameter.
+    if((['efficiencyKmL','fuelPrice','netPerHour','tripsPerHour','kmPerHour'].includes(k) && s[k]<=0) ||
+       (['maintenancePerKm','commissionPct'].includes(k) && s[k]===0 && raw!==null)) needsMigration=true;
   }
-  if(invalidCore){
-    for(const k of Object.keys(DEFAULTS)) s[k]=DEFAULTS[k];
-    for(const k of Object.keys(DEFAULTS)) localStorage.setItem(`b20s2_${k}`,String(s[k]));
+  if(needsMigration){
+    for(const k of Object.keys(DEFAULTS)){
+      s[k]=DEFAULTS[k];
+      localStorage.setItem(`b20s2_${k}`,String(s[k]));
+    }
     localStorage.setItem('b20s2_migrated_at',new Date().toISOString());
   }
   if(s.maintenancePerKm<0 || !Number.isFinite(s.maintenancePerKm)) s.maintenancePerKm=DEFAULTS.maintenancePerKm;
   if(s.commissionPct<0 || s.commissionPct>=100 || !Number.isFinite(s.commissionPct)) s.commissionPct=DEFAULTS.commissionPct;
   return s;
 }
+
 function validateSettings(s){
   if(s.efficiencyKmL<=0) return 'El rendimiento debe ser mayor que 0 km/L.';
   if(s.fuelPrice<0) return 'El precio de combustible no puede ser negativo.';

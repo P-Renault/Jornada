@@ -17,3 +17,5 @@
 - La fuente activa src/app.js ahora aplica recuperación automática de valores base.
 - Incrementa cache-busting a b20-s02-1.3.
 - No requiere SQL.
+
+- v1.4: carga el app.js raíz para evitar ambigüedad de rutas y fuerza migración de valores heredados en cero.

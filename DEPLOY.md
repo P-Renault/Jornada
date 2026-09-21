@@ -10,3 +10,6 @@
 8. Probar una planificación nueva.
 
 No ejecutar SQL.
+
+## v1.4
+Reemplazar TODO el contenido del despliegue. La página debe mostrar `v1.4` en el pie.
