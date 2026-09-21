@@ -221,7 +221,58 @@ function saveComp(){const rec={id:`${Date.now()}-${Math.random().toString(36).sl
 function exportList(key,version,name){const payload={version,exportedAt:new Date().toISOString(),records:jsonList(key)};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`b20-${name}-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 async function importList(file,key,renderFn,label){try{const d=JSON.parse(await file.text());const list=Array.isArray(d.records)?d.records:[];if(!list.length)throw new Error('El archivo no contiene registros.');putList(key,list);renderFn();msg(`${label} importadas correctamente.`);}catch(e){msg(`No se pudo importar: ${e.message}`);}}
 
-function render(){renderPlan();renderActive();renderFormIdle();renderMetrics();renderHistory();renderSettings();renderVehicle();renderFuel();renderMaintenance();renderComponents();}
+
+// ===== S06: Documentación y vencimientos (persistencia local durante validación) =====
+const DOC_KEY='b20s6_vehicle_documents';
+const docs=()=>jsonList(DOC_KEY);
+function saveDocs(list){localStorage.setItem(DOC_KEY,JSON.stringify(list));}
+function docTypeLabel(t){return ({revision_tecnica:'Revisión técnica',permiso_circulacion:'Permiso de circulación',soap:'SOAP',seguro:'Seguro',otro:'Otro'})[t]||t;}
+function daysTo(date){if(!date)return null;const a=new Date(date+'T00:00:00');const b=new Date();a.setHours(0,0,0,0);b.setHours(0,0,0,0);return Math.ceil((a-b)/86400000);}
+function docState(d){const days=daysTo(d.vencimiento);if(days===null)return ['Sin vencimiento','neutral'];if(days<0)return [`Vencido hace ${Math.abs(days)} días`,'danger'];if(days<=30)return [`Vence en ${days} días`,'warn'];return [`Vigente · ${days} días`,'ok'];}
+function renderDocs(){
+ const list=docs().sort((a,b)=>(a.vencimiento||'9999').localeCompare(b.vencimiento||'9999'));
+ const expired=list.filter(d=>daysTo(d.vencimiento)!==null&&daysTo(d.vencimiento)<0).length;
+ const due=list.filter(d=>{const x=daysTo(d.vencimiento);return x!==null&&x>=0&&x<=30}).length;
+ const cost=list.reduce((a,d)=>a+(Number(d.costo)||0),0);
+ $('docSummary').innerHTML=[['Documentos',list.length],['Vencidos',expired],['Vencen ≤30 días',due],['Costo acumulado',money(cost)]].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join('');
+ $('docAlerts').innerHTML=list.length?list.map(d=>{const [state,cls]=docState(d);return `<div class="row"><strong>${docTypeLabel(d.tipo)}</strong><span>${d.nombre||'Sin nombre'} · ${state}</span></div>`}).join(''):'<p class="muted">No hay documentos registrados.</p>';
+ $('docHistory').innerHTML=list.length?list.map(d=>{const [state,cls]=docState(d);return `<div class="history-item"><strong>${docTypeLabel(d.tipo)}</strong> — ${d.nombre||'Sin nombre'}<br><span class="muted">Vence: ${d.vencimiento||'—'} · Costo: ${money(d.costo||0)} · ${state}</span>${d.numero?`<br><span class="muted">N°/folio: ${d.numero}</span>`:''}${d.nota?`<br><span class="muted">${d.nota}</span>`:''}<br><button class="secondary doc-delete" data-id="${d.id}">Eliminar</button></div>`}).join(''):'<p class="muted">Sin documentos registrados.</p>';
+ document.querySelectorAll('.doc-delete').forEach(b=>b.onclick=()=>{if(confirm('¿Eliminar este documento del registro local?')){saveDocs(docs().filter(x=>x.id!==b.dataset.id));renderDocs();msg('Documento eliminado.');}});
+}
+function clearDocForm(){['docName','docIssue','docExpiry','docCost','docNumber','docNote'].forEach(id=>$(id).value='');}
+function saveDoc(){const d={id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,tipo:val('docType'),nombre:val('docName').trim(),emision:val('docIssue')||null,vencimiento:val('docExpiry')||null,costo:Number(val('docCost'))||0,numero:val('docNumber').trim()||null,nota:val('docNote').trim()||null};if(!d.vencimiento||d.costo<0){msg('Completa la fecha de vencimiento y un costo válido.');return;}if(d.emision&&d.vencimiento<d.emision){msg('La fecha de vencimiento no puede ser anterior a la emisión.');return;}const list=docs();list.push(d);saveDocs(list);clearDocForm();renderDocs();msg('Documento registrado.');}
+function exportDocs(){const payload={version:'B20-S06-1.0',exportedAt:new Date().toISOString(),records:docs()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`b20-documentacion-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+function importDocs(file){const r=new FileReader();r.onload=()=>{try{const p=JSON.parse(r.result);if(!Array.isArray(p.records))throw new Error();saveDocs(p.records);renderDocs();msg('Documentación importada.');}catch(e){msg('Archivo de documentación inválido.');}};r.readAsText(file);}
+
+
+// ===== S07: Servicios del vehículo (persistencia local durante validación) =====
+const SERVICE_KEY='b20s7_vehicle_services';
+function serviceRecords(){return jsonList(SERVICE_KEY);}
+function serviceLabel(t){return ({lavado:'Lavado',aspirado:'Aspirado',limpieza:'Limpieza',lubricacion:'Lubricación',detailing:'Detailing',otro:'Otro'})[t]||t;}
+function renderServices(){
+ const list=serviceRecords().sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha))||Number(b.km||0)-Number(a.km||0));
+ const total=list.reduce((s,r)=>s+Number(r.costo||0),0);
+ const recurring=list.filter(r=>r.proximaFecha).length;
+ const ref=vehicleOdometer();
+ $('svcSummary').innerHTML=[['Servicios',list.length],['Costo acumulado',money(total)],['Con próxima fecha',recurring],['Odómetro de referencia',ref?`${ref.toLocaleString('es-CL')} km`:'No definido']].map(([a,b])=>`<div><span>${a}</span><strong>${b}</strong></div>`).join('');
+ $('svcHistory').innerHTML=list.length?list.map(r=>`<article class="item"><div class="row"><b>${String(r.fecha).slice(0,10)} · ${serviceLabel(r.tipo)}</b><button class="danger svc-delete" data-id="${r.id}">Eliminar</button></div><div class="mini-grid"><span>Km <b>${r.km?Number(r.km).toLocaleString('es-CL'):'—'}</b></span><span>Costo <b>${money(r.costo)}</b></span><span>Proveedor <b>${r.proveedor||'—'}</b></span><span>Próx. fecha <b>${r.proximaFecha||'—'}</b></span></div><div class="muted">${r.nota||'Sin observaciones'}</div></article>`).join(''):'<div class="empty">Sin servicios registrados.</div>';
+ document.querySelectorAll('.svc-delete').forEach(b=>b.onclick=()=>{if(confirm('¿Eliminar este servicio del registro local?')){putList(SERVICE_KEY,serviceRecords().filter(x=>x.id!==b.dataset.id));renderServices();msg('Servicio eliminado.');}});
+}
+function clearServiceForm(){['svcDate','svcKm','svcCost','svcProvider','svcNextDate','svcNote'].forEach(id=>$(id).value='');$('svcType').value='lavado';}
+function saveService(){
+ const d=val('svcDate')||today(), km=Number(val('svcKm'))||0, costo=Number(val('svcCost'))||0, next=val('svcNextDate')||null;
+ const rec={id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,fecha:d,km,costo,tipo:val('svcType'),proveedor:val('svcProvider').trim()||null,proximaFecha:next,nota:val('svcNote').trim()||null};
+ const ref=vehicleOdometer();
+ if(costo<0||!d||!val('svcType')){msg('Completa fecha, tipo y costo válido.');return;}
+ if(km<0){msg('El kilometraje no puede ser negativo.');return;}
+ if(ref>0&&km>ref){msg(`El km del servicio (${km}) no puede superar el odómetro actual (${ref}) durante esta validación.`);return;}
+ if(next&&next<d){msg('La próxima fecha no puede ser anterior a la fecha del servicio.');return;}
+ const list=serviceRecords();list.push(rec);putList(SERVICE_KEY,list);clearServiceForm();renderServices();msg('Servicio registrado.');
+}
+function exportServices(){const payload={version:'B20-S07-1.0',exportedAt:new Date().toISOString(),records:serviceRecords()};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`b20-servicios-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+async function importServices(file){try{const d=JSON.parse(await file.text());const list=Array.isArray(d.records)?d.records:[];if(!list.length)throw new Error('El archivo no contiene servicios.');for(const r of list){if(!r.fecha||!r.tipo||Number(r.costo)<0)throw new Error('El archivo contiene un servicio inválido.');}putList(SERVICE_KEY,list);renderServices();msg('Historial de servicios importado.');}catch(e){msg(`No se pudo importar servicios: ${e.message}`);}}
+
+function render(){renderPlan();renderActive();renderFormIdle();renderMetrics();renderHistory();renderSettings();renderVehicle();renderFuel();renderMaintenance();renderComponents();renderDocs();renderServices();}
 
 async function startJourney(){
   if(active)return;
@@ -264,6 +315,10 @@ loadSettingsIntoForm();loadVehicleForm();$('histMonth').value=today().slice(0,7)
 $('saveVehicle').onclick=saveVehicle;$('resetVehicle').onclick=resetVehicle;
 $('fuelLitros').addEventListener('input',calcFuelTotal);$('fuelUnitPrice').addEventListener('input',calcFuelTotal);$('saveFuel').onclick=saveFuel;$('exportFuel').onclick=exportFuel;$('importFuel').onchange=e=>{if(e.target.files[0])importFuelFile(e.target.files[0]);e.target.value='';};$('fuelDate').value=today();
 $('saveMaint').onclick=saveMaint;$('exportMaint').onclick=()=>exportList(MAINT_KEY,'B20-S05-1.0','mantenciones');$('importMaint').onchange=e=>{if(e.target.files[0])importList(e.target.files[0],MAINT_KEY,renderMaintenance,'Mantenciones');e.target.value='';};$('maintDate').value=today();
+
+$('saveDoc').onclick=saveDoc;$('exportDocs').onclick=exportDocs;$('importDocs').onchange=e=>{if(e.target.files[0])importDocs(e.target.files[0]);e.target.value='';};
+$('saveSvc').onclick=saveService;$('exportSvc').onclick=exportServices;$('importSvc').onchange=e=>{if(e.target.files[0])importServices(e.target.files[0]);e.target.value='';};$('svcDate').value=today();
+$('docIssue').value=today();
 $('saveComp').onclick=saveComp;$('exportComp').onclick=()=>exportList(COMP_KEY,'B20-S05-1.0','componentes');$('importComp').onchange=e=>{if(e.target.files[0])importList(e.target.files[0],COMP_KEY,renderComponents,'Componentes');e.target.value='';};$('compDate').value=today();
 for(const id of ['meta','horasPlan','kmInicio'])$(id).addEventListener('input',renderPlan);
 (function boot(){const u=localStorage.getItem('b20s2_url'),k=localStorage.getItem('b20s2_key');if(u&&k){$('url').value=u;$('key').value=k;$('connect').click();}})();
