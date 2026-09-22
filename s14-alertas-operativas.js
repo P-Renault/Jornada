@@ -123,7 +123,6 @@ function build14(){
     add14(a,gap>=goal*.5?'media':'info','Meta de ingreso aún no cubierta',`Registrado ${money14(income)} de ${money14(goal)}. Brecha ${money14(gap)}.`,'S11');
   }
 
-  if(!a.length)add14(a,'info','Sin alertas detectadas','No se encontraron pendientes críticos con los datos locales disponibles.','S14');
   return a;
 }
 
@@ -137,13 +136,14 @@ function render14(){
   ensure14();badge14();
   const month=document.getElementById('s14Month');
   month.value=month.value||new Date().toISOString().slice(0,7);
+  const selectedMonth=month.value;
   const alerts=build14();
   const high=alerts.filter(x=>x.nivel==='alta'),medium=alerts.filter(x=>x.nivel==='media'),info=alerts.filter(x=>x.nivel==='info');
   document.getElementById('s14Summary').innerHTML=[
     ['Alertas totales',alerts.length],['Prioridad alta',high.length],['Atención',medium.length],['Información',info.length]
   ].map(x=>`<div class="card"><span>${x[0]}</span><strong>${x[1]}</strong></div>`).join('');
   renderList14('s14High',high);renderList14('s14Medium',medium);renderList14('s14Info',info);
-  document.getElementById('s14Diag').innerHTML=`<strong>Diagnóstico S14</strong><p>Referencia: ${month}. Las alertas son calculadas localmente a partir de S05, S06, S08, S09, S10 y S11.</p><p>No se modifican registros de las capas anteriores y no se requiere SQL.</p>`;
+  document.getElementById('s14Diag').innerHTML=`<strong>Diagnóstico S14</strong><p>Referencia: ${selectedMonth}. Las alertas son calculadas localmente a partir de S05, S06, S08, S09, S10 y S11.</p><p>No se modifican registros de las capas anteriores y no se requiere SQL.</p>`;
 }
 
 function show14(){

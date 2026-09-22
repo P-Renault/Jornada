@@ -1,0 +1,29 @@
+B20 S14 — CORRECCIÓN
+
+La captura confirmó dos detalles de interfaz:
+
+1. El diagnóstico mostraba:
+   [object HTMLInputElement]
+   porque se estaba interpolando el elemento HTML en lugar de su valor.
+
+2. Con cero alertas, el contador mostraba:
+   Alertas totales 1 / Información 1
+   porque el texto "Sin alertas detectadas" estaba siendo contabilizado como una alerta.
+
+Ambos puntos están corregidos.
+
+CARGA:
+- Reemplaza el archivo existente `s14-alertas-operativas.js` por el de este paquete.
+- No cambies index.html.
+- No modifiques S05-S13.
+- No requiere SQL.
+
+VALIDACIÓN ESPERADA SIN DATOS:
+- Alertas totales: 0
+- Prioridad alta: 0
+- Atención: 0
+- Información: 0
+- Las secciones mostrarán "Sin elementos."
+- Diagnóstico: Referencia: 2026-09 (o el mes seleccionado).
+
+Después de publicar, recarga la página y vuelve a entrar a Alertas.
