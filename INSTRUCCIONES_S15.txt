@@ -1,0 +1,32 @@
+B20 S15 — PLAN DE ACCIÓN
+
+PASO 1
+Sube `s15-plan-accion.js` a la raíz de P-Renault/Jornada.
+
+PASO 2
+En index.html busca:
+<script type="module" src="s14-alertas-operativas.js?v=b20-s14-1.0"></script>
+
+Agrega inmediatamente debajo:
+<script type="module" src="s15-plan-accion.js?v=b20-s15-1.0"></script>
+
+PASO 3
+Commit y publica GitHub Pages.
+
+VALIDACIÓN:
+- Aparece botón "Acciones".
+- Muestra B20 · S15.
+- Permite crear acciones.
+- Prioridad: Alta/Media/Baja.
+- Fecha de vencimiento.
+- Responsable.
+- Origen.
+- Estado: Pendiente/En progreso/Resuelto.
+- Importar alertas S14.
+- Exportar acciones.
+- Limpiar resueltas.
+- Contadores totales, pendientes, progreso, resueltas y vencidas.
+- No modifica S01-S14.
+- No requiere SQL.
+
+S15 usa localStorage exclusivamente para validación.
