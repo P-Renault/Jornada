@@ -50,6 +50,9 @@ function audit18(){
     if(parsed===null)return {s,name,key,status:'inválido',detail:'Existe la clave, pero el contenido no es JSON válido.'};
     if(Array.isArray(parsed))return {s,name,key,status:'ok',detail:`${parsed.length} registro(s).`};
     if(typeof parsed==='object')return {s,name,key,status:'ok',detail:'1 valor/objeto.'};
+    // S11 income goal is intentionally stored as a scalar in the current build.
+    if(key==='b20s11_income_goal' && (typeof parsed==='number' || (typeof parsed==='string' && parsed.trim()!=='' && Number.isFinite(Number(parsed)))))
+      return {s,name,key,status:'ok',detail:`Meta escalar: ${Number(parsed).toLocaleString('es-CL')}.`};
     return {s,name,key,status:'revisar',detail:'Tipo de dato no esperado.'};
   });
 }

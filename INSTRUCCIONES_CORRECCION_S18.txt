@@ -1,0 +1,22 @@
+B20 S18 — CORRECCIÓN
+
+La auditoría detectó correctamente que 10 claves aún no tienen datos locales; eso puede ser normal.
+
+Se corrigió un falso positivo:
+- `b20s11_income_goal` puede estar almacenado como valor escalar (número o cadena numérica) en la implementación actual de S11.
+- S18 ahora lo reconoce como OK y muestra el valor de la meta.
+
+Reemplaza únicamente:
+s18-auditoria-sistema.js
+
+No cambies index.html.
+No requiere SQL.
+No modifica datos.
+
+Resultado esperado con el estado actual:
+- Correctos: 2
+- Ausentes: 10
+- Inválidos: 0
+- Revisar: 0
+
+Los 10 ausentes son informativos y no constituyen un error mientras esos módulos no hayan sido utilizados.
