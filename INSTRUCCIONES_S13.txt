@@ -1,0 +1,30 @@
+B20 S13 — TABLERO DE CONTROL
+
+PASO 1
+Sube `s13-tablero-control.js` a la raíz de P-Renault/Jornada.
+
+PASO 2
+En index.html busca:
+<script type="module" src="s12-proyeccion.js?v=b20-s12-1.0"></script>
+
+Agrega inmediatamente debajo:
+<script type="module" src="s13-tablero-control.js?v=b20-s13-1.0"></script>
+
+PASO 3
+Commit y espera la publicación de GitHub Pages.
+
+VALIDACIÓN:
+- Aparece botón "Tablero".
+- Muestra B20 · S13.
+- Selecciona mes.
+- Consolida Meta S11.
+- Consolida Ingresos S11.
+- Consolida Gasto S08.
+- Calcula saldo del período.
+- Muestra presupuesto planificado.
+- Muestra créditos pendientes de S10.
+- Muestra porcentaje de cumplimiento.
+- No modifica S08, S10 ni S11.
+- No requiere SQL.
+
+Si el sistema tiene datos en S08/S10/S11, S13 los leerá automáticamente desde localStorage.
