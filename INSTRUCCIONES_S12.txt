@@ -1,0 +1,30 @@
+B20 S12 — PROYECCIÓN Y ESCENARIOS
+
+PASO 1
+Sube `s12-proyeccion.js` a la raíz del repositorio P-Renault/Jornada.
+
+PASO 2
+Abre index.html y busca:
+<script type="module" src="s11-presupuesto.js?v=b20-s11-1.0"></script>
+
+Inmediatamente debajo agrega:
+<script type="module" src="s12-proyeccion.js?v=b20-s12-1.0"></script>
+
+PASO 3
+Commit de ambos cambios.
+
+PASO 4
+Recarga GitHub Pages.
+
+VALIDACIÓN S12
+- Aparece botón "Proyección".
+- Al abrirlo muestra B20 · S12.
+- Selección de mes.
+- Jornadas proyectadas.
+- Neto objetivo por jornada.
+- Variación de escenarios.
+- Lee Meta S11, Ingreso registrado S11 y Presupuesto S11.
+- Muestra escenarios Conservador, Base y Expansivo.
+- Muestra saldo proyectado y brecha.
+- No requiere SQL.
+- No modifica S01-S11.
