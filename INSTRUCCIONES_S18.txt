@@ -1,0 +1,22 @@
+B20 S18 — AUDITORÍA Y SALUD DEL SISTEMA
+
+1. Sube s18-auditoria-sistema.js a la raíz de P-Renault/Jornada.
+
+2. En index.html busca:
+<script type="module" src="s17-respaldo.js?v=b20-s17-1.0"></script>
+
+Agrega inmediatamente debajo:
+<script type="module" src="s18-auditoria-sistema.js?v=b20-s18-1.0"></script>
+
+3. Commit y publica GitHub Pages.
+
+VALIDACIÓN:
+- Aparece Auditoría.
+- Muestra B20 · S18.
+- Ejecuta auditoría.
+- Cuenta elementos auditados, correctos, ausentes, inválidos y por revisar.
+- Detalla cada clave local.
+- Distingue ausencia normal de JSON inválido.
+- No modifica S01-S17.
+- No toca Supabase.
+- No requiere SQL.
