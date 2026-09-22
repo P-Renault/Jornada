@@ -1,0 +1,30 @@
+B20 S14 — ALERTAS OPERATIVAS
+
+PASO 1
+Sube `s14-alertas-operativas.js` a la raíz de P-Renault/Jornada.
+
+PASO 2
+En index.html busca:
+<script type="module" src="s13-tablero-control.js?v=b20-s13-1.0"></script>
+
+Agrega inmediatamente debajo:
+<script type="module" src="s14-alertas-operativas.js?v=b20-s14-1.0"></script>
+
+PASO 3
+Commit y espera la publicación de GitHub Pages.
+
+VALIDACIÓN:
+- Aparece botón "Alertas".
+- Muestra B20 · S14.
+- Muestra contador de alertas.
+- Clasifica Prioridad alta / Atención / Información.
+- Revisa vencimientos de S06.
+- Revisa hitos de S05.
+- Compara gasto S08 contra presupuesto S11.
+- Revisa déficit del fondo S09.
+- Revisa saldos de créditos S10.
+- Revisa brecha de ingreso S11.
+- No modifica S05-S13.
+- No requiere SQL.
+
+Nota: si una capa no tiene datos, no se genera una alerta artificial.
