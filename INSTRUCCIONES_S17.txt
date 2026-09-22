@@ -1,0 +1,20 @@
+B20 S17 — RESPALDO Y RESTAURACIÓN
+
+1. Sube s17-respaldo.js a la raíz de P-Renault/Jornada.
+2. En index.html, debajo de:
+<script type="module" src="s16-cierre-diario.js?v=b20-s16-1.0"></script>
+
+agrega:
+<script type="module" src="s17-respaldo.js?v=b20-s17-1.0"></script>
+
+3. Commit y publica GitHub Pages.
+
+VALIDACIÓN:
+- Aparece Respaldo.
+- Muestra B20 · S17.
+- Muestra conjuntos respaldables y datos presentes.
+- Crear respaldo descarga JSON.
+- Restaurar respaldo acepta JSON B20-S17-1.0.
+- Confirma antes de reemplazar datos locales.
+- No modifica Supabase.
+- No requiere SQL.
