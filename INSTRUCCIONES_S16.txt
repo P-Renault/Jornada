@@ -1,0 +1,29 @@
+B20 S16 — CIERRE DIARIO
+
+PASO 1
+Sube `s16-cierre-diario.js` a la raíz de P-Renault/Jornada.
+
+PASO 2
+En index.html busca:
+<script type="module" src="s15-plan-accion.js?v=b20-s15-1.0"></script>
+
+Agrega inmediatamente debajo:
+<script type="module" src="s16-cierre-diario.js?v=b20-s16-1.0"></script>
+
+PASO 3
+Commit y publica GitHub Pages.
+
+VALIDACIÓN:
+- Aparece "Cierre diario".
+- Muestra B20 · S16.
+- Permite seleccionar fecha.
+- Consolida ingresos S11.
+- Consolida gastos S08.
+- Calcula resultado neto diario.
+- Muestra crédito pendiente S10.
+- Muestra acciones pendientes S15.
+- Muestra cantidad de movimientos.
+- No modifica S01-S15.
+- No requiere SQL.
+
+S16 es una capa de lectura/consolidación.
