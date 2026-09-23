@@ -1,10 +1,10 @@
-/* B20 S19.1 · Producción: autenticación, sesión persistente, RLS y sincronización */
+/* B20 S19 · Producción: autenticación, sesión persistente, RLS y sincronización */
 (function(){
 'use strict';
 const KEYS=[
 'b20s2_efficiencyKmL','b20s2_fuelPrice','b20s2_maintenancePerKm','b20s2_commissionPct','b20s2_netPerHour','b20s2_tripsPerHour','b20s2_kmPerHour','b20s2_saved_at','b20s2_url','b20s2_key',
 'b20s3_marca','b20s3_modelo','b20s3_anio','b20s3_patente','b20s3_kmReferencia','b20s3_tanqueLitros','b20s3_saved_at',
-'b20s4_fuel_records','b20s5_maintenance_records','b20s5_component_records','b20s6_vehicle_documents','b20s7_vehicle_services','b20s8_operating_expenses','b20s9_fund_movements','b20s9_future_needs','b20s10_credit_movements','b20s11_budget_lines','b20s11_income_records','b20s11_income_goal','b20s15_action_items'
+'b20s4_fuel_records','b20s5_maintenance_records','b20s5_component_records','b20s6_vehicle_documents','b20s7_service_records','b20s8_operating_expenses','b20s9_fund_movements','b20s9_future_needs','b20s10_credit_movements','b20s11_budget_lines','b20s11_income_records','b20s11_income_goal','b20s12_projection_config','b20s15_action_items'
 ];
 const DATA_KEYS=KEYS.filter(k=>!['b20s2_url','b20s2_key'].includes(k));
 const nativeCreate=window.supabase.createClient.bind(window.supabase);
