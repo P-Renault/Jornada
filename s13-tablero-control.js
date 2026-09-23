@@ -1,4 +1,4 @@
-/* B20 · S13 · Tablero de control 1.1
+/* B20 · S13 · Tablero de control 1.2
    Corrección: los ingresos operacionales provienen de jornadas_trabajo en Supabase.
    Se separan Bruto, Comisión app y Neto real.
    Presupuesto/gastos/créditos continúan leyendo sus módulos correspondientes.
@@ -61,6 +61,11 @@ function ensure13(){
     </div>
 
     <div class="card">
+      <h2>Descomposición del resultado operacional</h2>
+      <div id="s13CostBreakdown"></div>
+    </div>
+
+    <div class="card">
       <h2>Resultado mensual</h2>
       <div id="s13Result"></div>
     </div>
@@ -86,7 +91,7 @@ function badge13(){
   const f=document.getElementById('footerLabel');
   if(b)b.textContent='B20 · S13';
   if(l)l.textContent='Capa 13 · tablero de control';
-  if(f)f.textContent='B20 · Sprint S13 · tablero de control · v1.1';
+  if(f)f.textContent='B20 · Sprint S13 · tablero de control · v1.2';
 }
 
 function show13(){
@@ -118,6 +123,11 @@ function render13(){
   const netTotal=incomeRows.reduce((s,x)=>s+n13(x.ganancia_neta),0);
   const metaTotal=incomeRows.reduce((s,x)=>s+n13(x.meta_dia),0);
   const journeys=incomeRows.length;
+  const fuelTotal=incomeRows.reduce((s,x)=>s+n13(x.combustible),0);
+  const maintenanceTotal=incomeRows.reduce((s,x)=>s+n13(x.mantenimiento),0);
+  const operationalCost=fuelTotal+maintenanceTotal+commissionTotal;
+  const reconciliation=grossTotal-operationalCost;
+  const netDifference=netTotal-reconciliation;
 
   const budgetTotal=budget.reduce((s,x)=>s+n13(x.plan),0);
   const expenseTotal=expenses.reduce((s,x)=>s+n13(x.monto),0);
@@ -176,6 +186,22 @@ function render13(){
     <div>Brecha: <strong>${money13(Math.max(0,goal-netTotal))}</strong>.</div>
   `;
 
+  document.getElementById('s13CostBreakdown').innerHTML=`
+    <table>
+      <thead><tr><th>Componente</th><th>Resultado</th></tr></thead>
+      <tbody>
+        <tr><td>Ingreso bruto</td><td>${money13(grossTotal)}</td></tr>
+        <tr><td>Comisión app</td><td>− ${money13(commissionTotal)}</td></tr>
+        <tr><td>Combustible</td><td>− ${money13(fuelTotal)}</td></tr>
+        <tr><td>Mantenimiento</td><td>− ${money13(maintenanceTotal)}</td></tr>
+        <tr><td><strong>Resultado por desglose</strong></td><td><strong>${money13(reconciliation)}</strong></td></tr>
+        <tr><td>Neto almacenado en jornadas</td><td>${money13(netTotal)}</td></tr>
+        <tr><td>Diferencia de conciliación</td><td>${money13(netDifference)}</td></tr>
+      </tbody>
+    </table>
+    <p class="muted">La diferencia de conciliación permite detectar costos o ajustes incluidos en el neto que no estén representados en los campos de combustible, mantenimiento y comisión.</p>
+  `;
+
   document.getElementById('s13Result').innerHTML=`
     <table>
       <thead><tr><th>Indicador</th><th>Resultado</th></tr></thead>
@@ -225,7 +251,7 @@ async function load13(){
     rows13=r.data||[];
     render13();
   }catch(e){
-    console.warn('[B20 S13 Tablero 1.1]',e);
+    console.warn('[B20 S13 Tablero 1.2]',e);
   }
 }
 
