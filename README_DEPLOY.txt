@@ -1,52 +1,18 @@
-B20 · S21 · CALENDARIO 2.0
+B20 · S21 Calendario 2.0 — FIX DE NAVEGACIÓN
 
-OBJETIVO
-Agregar un calendario operacional al B20 y convertir cada fecha en una ficha diaria de análisis.
+Problema corregido:
+El botón Calendario se agregaba al menú, pero al hacer clic no abría el módulo porque
+la versión S21 tenía una referencia a una función `show()` inexistente.
 
-INCLUYE
-- Calendario mensual móvil.
-- Navegación mes anterior/siguiente.
-- Marcado de días con jornadas cerradas.
-- Neto visible en los días con datos.
-- Selección táctil de una fecha.
-- Ficha diaria consolidada.
+Este fix NO modifica Supabase ni las jornadas.
 
-FICHA DIARIA
-Resultado:
-- Meta
-- Neto real
-- % de cumplimiento
-- Brecha
+DEPLOY:
+1. Sube `s21-calendario-fix.js` al repositorio P-Renault/Jornada.
+2. En index.html, deja el script S21 existente:
+   <script src="s21-calendario-2.js?v=b20-s21-2.0"></script>
+3. Inmediatamente después agrega:
+   <script src="s21-calendario-fix.js?v=b20-s21-fix-1.0"></script>
+4. Publica GitHub Pages.
+5. Recarga la aplicación con caché actualizado.
 
-Productividad:
-- Horas
-- Neto/hora
-- Bruto/hora
-- Viajes
-- Km
-- Neto/km
-
-Costos:
-- Combustible
-- Comisión
-- Mantención
-- Costo operativo
-- Costo/km
-- Costo/viaje
-
-Lectura automática del día.
-
-DATOS
-Lee directamente jornadas_trabajo mediante la sesión autenticada B20.
-No crea tablas, no modifica RLS y no modifica jornadas.
-
-DESPLIEGUE
-1. Subir s21-calendario-2.js al repositorio P-Renault/Jornada.
-2. En index.html agregar al final de los scripts:
-<script src="s21-calendario-2.js?v=b20-s21-2.0"></script>
-3. No eliminar S01-S20.
-4. Publicar GitHub Pages.
-5. El botón Calendario aparecerá automáticamente en la navegación.
-
-NOTA
-La escritura directa al repositorio no se pudo completar por HTTP 403 del conector. El paquete está preparado para despliegue manual.
+No es necesario cambiar la base de datos ni ejecutar SQL.
