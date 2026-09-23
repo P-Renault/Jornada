@@ -1,21 +1,52 @@
-B20 · S20 MÉTRICAS · 1.2
+B20 · S21 · CALENDARIO 2.0
 
-CORRECCIÓN SOLICITADA
-La versión 1.1 dejaba visible el bloque antiguo de métricas y por eso aparecían indicadores repetidos.
+OBJETIVO
+Agregar un calendario operacional al B20 y convertir cada fecha en una ficha diaria de análisis.
 
-La 1.2:
-- oculta el bloque antiguo "Observación operacional B20";
-- conserva los datos para que app.js siga funcionando;
-- deja una sola presentación de Métricas;
-- integra los dos gráficos de torta del sistema inicial:
-  1. Meta alcanzada
-  2. Horas cumplidas
-- integra sus indicadores Real / Faltante / porcentaje;
-- mantiene el gráfico temporal Meta / Real neto / Combustible;
-- mantiene el análisis de productividad, eficiencia y cumplimiento.
+INCLUYE
+- Calendario mensual móvil.
+- Navegación mes anterior/siguiente.
+- Marcado de días con jornadas cerradas.
+- Neto visible en los días con datos.
+- Selección táctil de una fecha.
+- Ficha diaria consolidada.
+
+FICHA DIARIA
+Resultado:
+- Meta
+- Neto real
+- % de cumplimiento
+- Brecha
+
+Productividad:
+- Horas
+- Neto/hora
+- Bruto/hora
+- Viajes
+- Km
+- Neto/km
+
+Costos:
+- Combustible
+- Comisión
+- Mantención
+- Costo operativo
+- Costo/km
+- Costo/viaje
+
+Lectura automática del día.
+
+DATOS
+Lee directamente jornadas_trabajo mediante la sesión autenticada B20.
+No crea tablas, no modifica RLS y no modifica jornadas.
 
 DESPLIEGUE
-1. Reemplazar s20-metricas-mejora.js por esta versión.
-2. Mantener el mismo <script> en index.html, cambiando opcionalmente el query string a:
-<script src="s20-metricas-mejora.js?v=b20-s20-1.2"></script>
-3. No modificar S01-S19.
+1. Subir s21-calendario-2.js al repositorio P-Renault/Jornada.
+2. En index.html agregar al final de los scripts:
+<script src="s21-calendario-2.js?v=b20-s21-2.0"></script>
+3. No eliminar S01-S20.
+4. Publicar GitHub Pages.
+5. El botón Calendario aparecerá automáticamente en la navegación.
+
+NOTA
+La escritura directa al repositorio no se pudo completar por HTTP 403 del conector. El paquete está preparado para despliegue manual.
