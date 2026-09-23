@@ -1,46 +1,21 @@
-B20 · S22 · HISTÓRICO OPERACIONAL CONSOLIDADO v2.0
+B20 S22 v2.2 — Planificación operacional con combustible histórico
 
-OBJETIVO
-Registrar el pasado de Uber/InDrive como CONSOLIDADOS, no como jornadas.
-Una fila puede representar años completos de explotación.
+DESPLIEGUE
+1. Reemplazar el archivo actual s22-historico-consolidado-v2.js por s22-historico-consolidado-v2.2.js.
+2. En index.html cambiar la referencia del script a:
+   <script src="s22-historico-consolidado-v2.2.js?v=b20-s22-2.2"></script>
+3. No ejecutar SQL nuevo si la tabla b20_historico_operacional ya existe.
+4. No modificar jornadas_trabajo.
 
-EJEMPLO
-InDrive | 2022-01-01 | 2025-12-31 | bruto 6.200.000 | comisión 1.200.000 | neto 5.000.000 | 1.850 viajes | 38.500 km | 2.100 h
+MEJORAS
+- S22 ocupa todo el ancho disponible.
+- Planificador basado en meta neta.
+- Incorpora combustible histórico de referencia, editable (por defecto $2.200.000).
+- Calcula bruto requerido, comisión, combustible, resultado después de combustible, km y viajes.
+- Muestra productividad histórica por km y por viaje.
+- Horas requeridas aparecen cuando se ingresen horas actuales/históricas válidas.
+- Distingue resultado después de combustible de resultado final de explotación.
+- Mantiene manual, CSV, exportación y resumen.
 
-1) SUPABASE
-IMPORTANTE: S22 v2 cambia la estructura de S22 v1 (fecha -> periodo_desde/periodo_hasta).
-Si ya ejecutaste S22 v1 y la tabla b20_historico_operacional está vacía, puedes eliminarla y ejecutar s22-historico-consolidado-v2.sql.
-Si contiene datos que quieres conservar, NO la elimines: respáldalos antes y hacemos una migración separada.
-
-2) GITHUB
-Sube s22-historico-consolidado-v2.js al repositorio como:
-s22-historico-consolidado-v2.js
-
-Luego agrega al final de index.html, después de S21:
-<script src="s22-historico-consolidado-v2.js?v=b20-s22-2.0"></script>
-
-3) PUBLICAR
-Commit en main y espera GitHub Pages.
-
-4) VALIDACIÓN
-Debe aparecer un botón "Histórico".
-Al abrirlo debe decir "Histórico operacional consolidado" y el pie debe indicar:
-B20 · Sprint S22 · histórico consolidado · v2.0
-
-5) CARGA MANUAL
-Ejemplo:
-Desde: 2022-01-01
-Hasta: 2025-12-31
-Aplicación: InDrive
-Ingreso bruto: 6200000
-Comisión: 1200000
-Neto: 5000000
-Viajes: 1850
-Km: 38500
-Horas: 2100
-
-6) CSV
-Encabezado:
-periodo_desde,periodo_hasta,fuente,ingreso_bruto,comision_app,ingreso_neto,km_recorridos,horas_trabajadas,viajes,combustible,mantenimiento,notas
-
-NO RECONSTRUYE JORNADAS. NO MODIFICA jornadas_trabajo.
+NOTA
+El valor $2.200.000 es una referencia histórica aproximada introducida en el planificador. No modifica los registros consolidados ni los convierte en un costo por jornada. Puede ajustarse cuando se disponga de un dato histórico más preciso.
