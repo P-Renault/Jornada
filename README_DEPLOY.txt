@@ -1,39 +1,46 @@
-B20 · S13 TABLERO CORREGIDO · v1.1
+B20 · S22 · HISTÓRICO OPERACIONAL CONSOLIDADO v2.0
 
-PROBLEMA:
-La versión anterior de S13 calculaba "Ingreso registrado" exclusivamente desde
-localStorage: b20s11_income_records.
+OBJETIVO
+Registrar el pasado de Uber/InDrive como CONSOLIDADOS, no como jornadas.
+Una fila puede representar años completos de explotación.
 
-Las siete jornadas reales están en Supabase, tabla jornadas_trabajo. Por eso el
-tablero mostraba $0 aunque Historial/S20 sí podían leer las jornadas.
+EJEMPLO
+InDrive | 2022-01-01 | 2025-12-31 | bruto 6.200.000 | comisión 1.200.000 | neto 5.000.000 | 1.850 viajes | 38.500 km | 2.100 h
 
-CORRECCIÓN:
-S13 v1.1 usa jornadas_trabajo como fuente operacional para:
-- jornadas cerradas
-- ingreso bruto
-- comisión app
-- ingreso neto
-- metas diarias acumuladas
+1) SUPABASE
+IMPORTANTE: S22 v2 cambia la estructura de S22 v1 (fecha -> periodo_desde/periodo_hasta).
+Si ya ejecutaste S22 v1 y la tabla b20_historico_operacional está vacía, puedes eliminarla y ejecutar s22-historico-consolidado-v2.sql.
+Si contiene datos que quieres conservar, NO la elimines: respáldalos antes y hacemos una migración separada.
 
-Mantiene:
-- meta mensual desde S11
-- presupuesto desde S11
-- gastos desde S08
-- créditos desde S10
+2) GITHUB
+Sube s22-historico-consolidado-v2.js al repositorio como:
+s22-historico-consolidado-v2.js
 
-NO requiere SQL.
+Luego agrega al final de index.html, después de S21:
+<script src="s22-historico-consolidado-v2.js?v=b20-s22-2.0"></script>
 
-DEPLOY MANUAL:
-1. Reemplazar en P-Renault/Jornada el archivo:
-   s13-tablero-control.js
-   por este archivo corregido.
-2. Mantener en index.html:
-   <script type="module" src="s13-tablero-control.js?v=b20-s13-1.0"></script>
-   o cambiar la versión a:
-   <script type="module" src="s13-tablero-control.js?v=b20-s13-1.1"></script>
-3. Publicar GitHub Pages.
-4. Recargar la página.
+3) PUBLICAR
+Commit en main y espera GitHub Pages.
 
-NOTA:
-El botón Tablero existente será recreado por la versión corregida y sus datos
-operacionales vendrán directamente de Supabase.
+4) VALIDACIÓN
+Debe aparecer un botón "Histórico".
+Al abrirlo debe decir "Histórico operacional consolidado" y el pie debe indicar:
+B20 · Sprint S22 · histórico consolidado · v2.0
+
+5) CARGA MANUAL
+Ejemplo:
+Desde: 2022-01-01
+Hasta: 2025-12-31
+Aplicación: InDrive
+Ingreso bruto: 6200000
+Comisión: 1200000
+Neto: 5000000
+Viajes: 1850
+Km: 38500
+Horas: 2100
+
+6) CSV
+Encabezado:
+periodo_desde,periodo_hasta,fuente,ingreso_bruto,comision_app,ingreso_neto,km_recorridos,horas_trabajadas,viajes,combustible,mantenimiento,notas
+
+NO RECONSTRUYE JORNADAS. NO MODIFICA jornadas_trabajo.
