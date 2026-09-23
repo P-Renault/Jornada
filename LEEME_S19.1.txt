@@ -1,0 +1,20 @@
+B20 — S19.1 CORRECCIÓN DE PERSISTENCIA S07
+
+Reemplazar en GitHub:
+P-Renault/Jornada/s19-auth-persistencia.js
+
+Acción:
+1. Editar el archivo.
+2. Reemplazar TODO su contenido por:
+   s19-auth-persistencia-S07-PERSISTENCIA-CORREGIDA.js
+3. Commit.
+
+No modificar app.js ni Supabase.
+
+Corrección:
+S07 utiliza la clave local b20s7_vehicle_services.
+S19 ahora incluye esa misma clave dentro de DATA_KEYS para sincronizarla
+con public.b20_user_data por usuario autenticado.
+
+Después:
+Chrome → iniciar sesión → Sincronizar ahora → Firefox → iniciar sesión → Servicios.
