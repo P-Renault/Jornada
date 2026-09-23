@@ -1,46 +1,21 @@
-B20 · S20 MÉTRICAS · 1.1
+B20 · S20 MÉTRICAS · 1.2
 
-CAMBIO
-El módulo Métricas queda como análisis complementario del Resumen.
+CORRECCIÓN SOLICITADA
+La versión 1.1 dejaba visible el bloque antiguo de métricas y por eso aparecían indicadores repetidos.
 
-SE ELIMINAN REPETICIONES DEL RESUMEN:
-- Ganancia neta acumulada
-- Ganancia bruta acumulada
-- Metas acumuladas
-- Diferencia neta vs metas
-- Jornadas cerradas
-- Km acumulados
-- Horas acumuladas
-- Viajes acumulados
-- Costos mensuales
-
-SE MANTIENEN / AGREGAN EN MÉTRICAS:
-PRODUCTIVIDAD
-- Neto por hora
-- Neto por viaje
-- Neto por km
-- Km por viaje
-
-EFICIENCIA OPERACIONAL
-- Combustible por km
-- Combustible por hora
-- Comisión sobre bruto
-- Mejor neto/hora
-
-CUMPLIMIENTO DE META
-- Desviación media vs meta
-- Desviación relativa
-- Mejor neto/km
-- Mejor neto/viaje
-
-GRÁFICO
-- Meta / Real neto / Combustible
-- Últimos 7 o 30 días
-- Consulta táctil por fecha
+La 1.2:
+- oculta el bloque antiguo "Observación operacional B20";
+- conserva los datos para que app.js siga funcionando;
+- deja una sola presentación de Métricas;
+- integra los dos gráficos de torta del sistema inicial:
+  1. Meta alcanzada
+  2. Horas cumplidas
+- integra sus indicadores Real / Faltante / porcentaje;
+- mantiene el gráfico temporal Meta / Real neto / Combustible;
+- mantiene el análisis de productividad, eficiencia y cumplimiento.
 
 DESPLIEGUE
-1. Subir s20-metricas-mejora.js al repo P-Renault/Jornada.
-2. En index.html agregar:
-<script src="s20-metricas-mejora.js?v=b20-s20-1.1"></script>
-3. No eliminar S01-S19.
-4. Publicar GitHub Pages.
+1. Reemplazar s20-metricas-mejora.js por esta versión.
+2. Mantener el mismo <script> en index.html, cambiando opcionalmente el query string a:
+<script src="s20-metricas-mejora.js?v=b20-s20-1.2"></script>
+3. No modificar S01-S19.
